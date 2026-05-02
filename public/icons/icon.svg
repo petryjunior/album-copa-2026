@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Bola">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f766e"/>
+      <stop offset="100%" stop-color="#0f4c3a"/>
+    </linearGradient>
+  </defs>
+  <circle cx="64" cy="64" r="60" fill="url(#g)"/>
+  <path fill="#ecfdf5" d="M64 28c22 14 37 41 42 73a60 60 0 01-118 29c26-43 76-71 131-71c-55 0-101-16-134-53c31 16 73 41 134 71c-61 29-117 53-173 71c52-52 129-104 229-157c-94 53-173 118-239 173c71-71 173-173 371-371Z" opacity=".18"/>
+  <path stroke="#bbf7d0" stroke-width="4" fill="none" d="M64 22v84M34 54h60m-71 43 81-26m-81 0 81 26"/>
+  <circle cx="64" cy="64" r="60" fill="none" stroke="#14532d" stroke-width="3"/>
+</svg>
