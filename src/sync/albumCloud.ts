@@ -20,17 +20,26 @@ export async function fetchAlbumRow(
   return { data: payload, updated_at: data.updated_at as string }
 }
 
+/** Devolve o `updated_at` do servidor (para alinhar o LWW com o `localStorage`). */
 export async function upsertAlbumRow(
   supabase: SupabaseClient,
   userId: string,
   shape: PersistedShape,
-): Promise<void> {
-  const { error } = await supabase.from('album_sync').upsert(
-    {
-      user_id: userId,
-      payload: shape,
-    },
-    { onConflict: 'user_id' },
-  )
+): Promise<string> {
+  const { data, error } = await supabase
+    .from('album_sync')
+    .upsert(
+      {
+        user_id: userId,
+        payload: shape,
+      },
+      { onConflict: 'user_id' },
+    )
+    .select('updated_at')
+    .single()
+
   if (error) throw error
+  const at = data?.updated_at
+  if (typeof at !== 'string') throw new Error('album_sync: resposta sem updated_at')
+  return at
 }

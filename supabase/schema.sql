@@ -41,3 +41,7 @@ create trigger album_sync_set_updated_at
   before update on public.album_sync
   for each row
   execute function public.album_sync_touch_updated_at();
+
+-- Opcional — atualização quase instantânea entre browsers:
+-- Supabase Dashboard → Database → Publications → supabase_realtime → incluir a tabela `album_sync`.
+-- Sem isto, o cliente ainda faz polling / refresh ao focar o separador.

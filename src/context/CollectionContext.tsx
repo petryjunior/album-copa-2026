@@ -102,6 +102,8 @@ type Ctx = {
   importJson: (raw: string) => { ok: true } | { ok: false; error: string }
   /** Substituir estado a partir da nuvem sem alterar o critério LWW do próximo save. */
   hydrateFromCloud: (shape: PersistedShape, remoteUpdatedAt: string) => void
+  /** Após envio à nuvem: alinhar o registo local de data com o `updated_at` do Supabase. */
+  alignSavedAtFromServer: (serverUpdatedAtIso: string) => void
 }
 
 const CollectionContext = createContext<Ctx | null>(null)
@@ -178,6 +180,15 @@ export function CollectionProvider({ children }: { children: ReactNode }) {
       if (!Number.isNaN(id)) next[id] = clampQty(Number(v))
     }
     dispatch({ type: 'hydrate', data: next })
+  }, [])
+
+  const alignSavedAtFromServer = useCallback((serverUpdatedAtIso: string) => {
+    try {
+      localStorage.setItem(LOCAL_SAVED_AT_KEY, serverUpdatedAtIso)
+      setLastLocalSavedAt(serverUpdatedAtIso)
+    } catch {
+      /* ignore */
+    }
   }, [])
 
   const importJson = useCallback((raw: string) => {
@@ -262,6 +273,7 @@ export function CollectionProvider({ children }: { children: ReactNode }) {
       buildShareUrl,
       importJson,
       hydrateFromCloud,
+      alignSavedAtFromServer,
     }),
     [
       state,
@@ -276,6 +288,7 @@ export function CollectionProvider({ children }: { children: ReactNode }) {
       buildShareUrl,
       importJson,
       hydrateFromCloud,
+      alignSavedAtFromServer,
     ],
   )
 

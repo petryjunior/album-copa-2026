@@ -13,6 +13,8 @@ import { getSupabase } from '@/lib/supabaseClient'
 import { fetchAlbumRow, upsertAlbumRow } from '@/sync/albumCloud'
 import { LOCAL_SAVED_AT_KEY } from '@/sync/constants'
 
+const POLL_REMOTE_MS = 45_000
+
 function parseSavedAtMs(raw: string | null): number {
   if (!raw) return 0
   const n = Date.parse(raw)
@@ -38,7 +40,7 @@ const CloudSyncContext = createContext<CloudSyncCtx | null>(null)
  */
 export function CloudSyncProvider({ children }: { children: ReactNode }) {
   const { session, loading } = useAuth()
-  const { state, exportPersistedShape, hydrateFromCloud } = useCollection()
+  const { state, exportPersistedShape, hydrateFromCloud, alignSavedAtFromServer } = useCollection()
   const exportRef = useRef(exportPersistedShape)
   exportRef.current = exportPersistedShape
 
@@ -55,13 +57,14 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
     if (!supabase) return
     setLastCloudError(null)
     try {
-      await upsertAlbumRow(supabase, uid, exportRef.current())
-      setLastCloudPushAt(new Date().toISOString())
+      const serverAt = await upsertAlbumRow(supabase, uid, exportRef.current())
+      alignSavedAtFromServer(serverAt)
+      setLastCloudPushAt(serverAt)
     } catch (e) {
       setLastCloudError(e instanceof Error ? e.message : 'Falha na sincronização automática.')
       throw e
     }
-  }, [uid])
+  }, [uid, alignSavedAtFromServer])
 
   const pushToCloudNow = useCallback(async (): Promise<boolean> => {
     const supabase = getSupabase()
@@ -72,8 +75,9 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
     setIsPushing(true)
     setLastCloudError(null)
     try {
-      await upsertAlbumRow(supabase, uid, exportRef.current())
-      setLastCloudPushAt(new Date().toISOString())
+      const serverAt = await upsertAlbumRow(supabase, uid, exportRef.current())
+      alignSavedAtFromServer(serverAt)
+      setLastCloudPushAt(serverAt)
       return true
     } catch (e) {
       setLastCloudError(e instanceof Error ? e.message : 'Não foi possível salvar na nuvem.')
@@ -81,7 +85,28 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsPushing(false)
     }
-  }, [uid])
+  }, [uid, alignSavedAtFromServer])
+
+  /**
+   * Busca a nuvem e aplica se `updated_at` for mais recente que o último save local.
+   * Necessário para outro dispositivo ver alterações (o pull inicial só corre ao abrir a sessão).
+   */
+  const pullRemoteIfNewer = useCallback(async () => {
+    if (!uid) return
+    const supabase = getSupabase()
+    if (!supabase) return
+    try {
+      const remote = await fetchAlbumRow(supabase, uid)
+      if (!remote) return
+      const localMs = parseSavedAtMs(localStorage.getItem(LOCAL_SAVED_AT_KEY))
+      const remoteMs = Date.parse(remote.updated_at)
+      if (remoteMs > localMs) {
+        hydrateFromCloud(remote.data, remote.updated_at)
+      }
+    } catch (e) {
+      console.error('[album cloud pullRemoteIfNewer]', e)
+    }
+  }, [uid, hydrateFromCloud])
 
   /** Pull ao entrar na conta — compara timestamps antes de sobrescrever. */
   useEffect(() => {
@@ -105,9 +130,10 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
         const localMs = parseSavedAtMs(localStorage.getItem(LOCAL_SAVED_AT_KEY))
 
         if (!remote) {
-          await upsertAlbumRow(supabase, uid, exportRef.current())
+          const serverAt = await upsertAlbumRow(supabase, uid, exportRef.current())
           if (!cancelled) {
-            setLastCloudPushAt(new Date().toISOString())
+            alignSavedAtFromServer(serverAt)
+            setLastCloudPushAt(serverAt)
             setPullDone(true)
           }
           return
@@ -117,8 +143,11 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
         if (remoteMs > localMs) {
           hydrateFromCloud(remote.data, remote.updated_at)
         } else if (localMs > remoteMs) {
-          await upsertAlbumRow(supabase, uid, exportRef.current())
-          if (!cancelled) setLastCloudPushAt(new Date().toISOString())
+          const serverAt = await upsertAlbumRow(supabase, uid, exportRef.current())
+          if (!cancelled) {
+            alignSavedAtFromServer(serverAt)
+            setLastCloudPushAt(serverAt)
+          }
         }
         if (!cancelled) setPullDone(true)
       } catch (e) {
@@ -130,7 +159,58 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true
     }
-  }, [loading, uid, hydrateFromCloud])
+  }, [loading, uid, hydrateFromCloud, alignSavedAtFromServer])
+
+  /** Voltar ao separador / foco / rede: puxar alterações de outros dispositivos. */
+  useEffect(() => {
+    if (!pullDone || loading || !uid) return
+    const refresh = () => {
+      if (document.visibilityState === 'visible') void pullRemoteIfNewer()
+    }
+    document.addEventListener('visibilitychange', refresh)
+    window.addEventListener('focus', refresh)
+    window.addEventListener('online', refresh)
+    return () => {
+      document.removeEventListener('visibilitychange', refresh)
+      window.removeEventListener('focus', refresh)
+      window.removeEventListener('online', refresh)
+    }
+  }, [pullDone, loading, uid, pullRemoteIfNewer])
+
+  /** Consulta periódica enquanto a página está aberta (fallback se Realtime não estiver ativo). */
+  useEffect(() => {
+    if (!pullDone || loading || !uid) return
+    const id = window.setInterval(() => void pullRemoteIfNewer(), POLL_REMOTE_MS)
+    return () => clearInterval(id)
+  }, [pullDone, loading, uid, pullRemoteIfNewer])
+
+  /**
+   * Atualização em tempo quase real quando o projeto Supabase tem Realtime ativo para `album_sync`.
+   * (Database → Replication → `album_sync`; caso contrário, o intervalo acima cobre.)
+   */
+  useEffect(() => {
+    if (!pullDone || loading || !uid) return
+    const supabase = getSupabase()
+    if (!supabase) return
+
+    const channel = supabase
+      .channel(`album_sync:${uid}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'album_sync',
+          filter: `user_id=eq.${uid}`,
+        },
+        () => void pullRemoteIfNewer(),
+      )
+      .subscribe()
+
+    return () => {
+      void supabase.removeChannel(channel)
+    }
+  }, [pullDone, loading, uid, pullRemoteIfNewer])
 
   /** Push com debounce após edições locais. */
   const pushTimer = useRef<ReturnType<typeof setTimeout> | null>(null)

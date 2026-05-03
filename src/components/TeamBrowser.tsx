@@ -175,6 +175,9 @@ export function TeamBrowser({ onPick }: { onPick: (entry: CatalogEntry) => void 
 
   const team = teams.find((t) => t.code === code)!
   const theme = getTeamTheme(team.code)
+  const teamIndex = teams.findIndex((t) => t.code === code)
+  const prevTeam = teamIndex > 0 ? teams[teamIndex - 1] : null
+  const nextTeam = teamIndex >= 0 && teamIndex < teams.length - 1 ? teams[teamIndex + 1] : null
 
   return (
     <div
@@ -213,6 +216,44 @@ export function TeamBrowser({ onPick }: { onPick: (entry: CatalogEntry) => void 
           </div>
         </div>
       </div>
+      {(prevTeam || nextTeam) && (
+        <div className="flex flex-wrap items-stretch justify-between gap-2">
+          {prevTeam ? (
+            <button
+              type="button"
+              onClick={() => setCode(prevTeam.code)}
+              aria-label={`Seleção anterior na ordem do álbum: ${prevTeam.name}, grupo ${prevTeam.group}`}
+              className="min-h-[3rem] max-w-[calc(50%-0.25rem)] flex-1 rounded-2xl border-2 bg-white/90 px-3 py-2 text-left text-xs shadow-sm backdrop-blur-sm transition hover:bg-white"
+              style={{ borderColor: theme.accent, color: theme.primaryDark }}
+            >
+              <span className="block text-[10px] font-bold uppercase tracking-wide opacity-70" style={{ color: theme.primary }}>
+                Anterior
+              </span>
+              <span className="line-clamp-2 font-semibold leading-tight">← {prevTeam.name}</span>
+              <span className="mt-0.5 block text-[10px] text-slate-500">Grupo {prevTeam.group}</span>
+            </button>
+          ) : (
+            <span className="min-w-0 flex-1" aria-hidden />
+          )}
+          {nextTeam ? (
+            <button
+              type="button"
+              onClick={() => setCode(nextTeam.code)}
+              aria-label={`Próxima seleção na ordem do álbum: ${nextTeam.name}, grupo ${nextTeam.group}`}
+              className="min-h-[3rem] max-w-[calc(50%-0.25rem)] flex-1 rounded-2xl border-2 bg-white/90 px-3 py-2 text-right text-xs shadow-sm backdrop-blur-sm transition hover:bg-white"
+              style={{ borderColor: theme.accent, color: theme.primaryDark }}
+            >
+              <span className="block text-[10px] font-bold uppercase tracking-wide opacity-70" style={{ color: theme.primary }}>
+                Próximo
+              </span>
+              <span className="line-clamp-2 font-semibold leading-tight">{nextTeam.name} →</span>
+              <span className="mt-0.5 block text-[10px] text-slate-500">Grupo {nextTeam.group}</span>
+            </button>
+          ) : (
+            <span className="min-w-0 flex-1" aria-hidden />
+          )}
+        </div>
+      )}
       <StickerGrid
         entries={entries}
         qtyOf={(id) => state[id] ?? 0}
