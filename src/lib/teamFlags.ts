@@ -61,6 +61,13 @@ export function teamCodeToFlagSlug(code: string): string | null {
   return null
 }
 
+/** URL da bandeira (flagcdn) para fundo desfocado nos cromos de seleção. */
+export function teamFlagImageUrl(code: string, width: 80 | 160 | 320 = 160): string | null {
+  const slug = teamCodeToFlagSlug(code)
+  if (!slug) return null
+  return `https://flagcdn.com/w${width}/${slug}.png`
+}
+
 function regionalPair(iso2: string): string {
   const u = iso2.toUpperCase()
   if (u.length !== 2) return '\u{1F3F3}\u{FE0F}'

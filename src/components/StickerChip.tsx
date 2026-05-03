@@ -1,22 +1,52 @@
-import { useEffect, useRef, type CSSProperties } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import type { CatalogEntry } from '@/types/catalog'
+import { teamFlagImageUrl } from '@/lib/teamFlags'
 import type { TeamVisualTheme } from '@/lib/teamThemes'
+
+type ChipBackdrop = { className?: string; style?: CSSProperties }
+
+type ChipLook = {
+  className: string
+  style?: CSSProperties
+  /** Véu por cima da bandeira (seleções com fundo de bandeira) */
+  backdrop?: ChipBackdrop
+}
 
 function chipAppearance(
   entry: CatalogEntry,
   has: boolean,
   theme?: TeamVisualTheme | null,
-): { className: string; style?: CSSProperties } {
+  withFlagBg?: boolean,
+): ChipLook {
   const base =
     'relative touch-manipulation flex min-h-[3.25rem] min-w-[3.25rem] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border border-solid px-1.5 py-1.5 text-center font-semibold transition [-webkit-touch-callout:none] active:scale-[0.98] '
 
   const useNation = Boolean(theme && entry.segment === 'team')
+  const fb = Boolean(withFlagBg && entry.segment === 'team')
 
   if (entry.metalizada && !has) {
+    if (fb) {
+      return {
+        className: base + 'border-amber-400 bg-transparent text-amber-950 ',
+        backdrop: { className: 'bg-amber-50/88' },
+      }
+    }
     return { className: base + 'border-amber-400 bg-amber-50 text-amber-950 ' }
   }
   if (entry.metalizada && has) {
     if (useNation && theme) {
+      if (fb) {
+        return {
+          className: base + 'bg-transparent text-white shadow ',
+          style: { borderColor: theme.accent },
+          backdrop: {
+            style: {
+              background: `linear-gradient(145deg, ${theme.primary}, ${theme.primaryDark}, #d97706)`,
+              opacity: 0.92,
+            },
+          },
+        }
+      }
       return {
         className: base + 'text-white shadow ',
         style: {
@@ -25,10 +55,27 @@ function chipAppearance(
         },
       }
     }
+    if (fb) {
+      return {
+        className: base + 'border-amber-500 bg-transparent text-white shadow ',
+        backdrop: { className: 'bg-gradient-to-br from-teal-600/88 via-teal-500/88 to-amber-400/88' },
+      }
+    }
     return { className: base + 'border-amber-500 bg-gradient-to-br from-teal-600 via-teal-500 to-amber-400 text-white shadow ' }
   }
   if (has) {
     if (useNation && theme) {
+      if (fb) {
+        return {
+          className: base + 'bg-transparent text-white shadow ',
+          style: { borderColor: theme.primaryDark },
+          backdrop: {
+            style: {
+              background: `linear-gradient(145deg, ${theme.primary}e8, ${theme.primaryDark}e8)`,
+            },
+          },
+        }
+      }
       return {
         className: base + 'text-white shadow ',
         style: {
@@ -37,15 +84,34 @@ function chipAppearance(
         },
       }
     }
+    if (fb) {
+      return {
+        className: base + 'border-teal-700 bg-transparent text-white shadow ',
+        backdrop: { className: 'bg-teal-600/78' },
+      }
+    }
     return { className: base + 'border-teal-700 bg-teal-600 text-white shadow ' }
   }
   if (useNation && theme) {
+    if (fb) {
+      return {
+        className: base + 'bg-transparent text-slate-900 shadow-sm ',
+        style: { borderColor: `${theme.accent}77` },
+        backdrop: { style: { backgroundColor: `${theme.primary}18` } },
+      }
+    }
     return {
       className: base + 'text-slate-900 shadow-sm ',
       style: {
         borderColor: `${theme.accent}77`,
         backgroundColor: `${theme.primary}12`,
       },
+    }
+  }
+  if (fb) {
+    return {
+      className: base + 'border-slate-300 bg-transparent text-slate-800 shadow-sm ',
+      backdrop: { className: 'bg-white/84' },
     }
   }
   return { className: base + 'border-slate-300 bg-white text-slate-800 shadow-sm ' }
@@ -114,7 +180,12 @@ function PrimaryLabel({
 export function StickerChip({ entry, qty, onMarkHaveOne, onOpenEditor, visualTheme }: Props) {
   const has = qty >= 1
   const dup = Math.max(0, qty - 1)
-  const { className: chipCls, style: chipStyle } = chipAppearance(entry, has, visualTheme)
+  const flagUrl =
+    entry.segment === 'team' && entry.teamCode ? teamFlagImageUrl(entry.teamCode) : null
+  const useFlagBg = Boolean(flagUrl)
+  const [flagBroken, setFlagBroken] = useState(false)
+  const look = chipAppearance(entry, has, visualTheme, useFlagBg && !flagBroken)
+  const { className: chipCls, style: chipStyle, backdrop } = look
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const suppressNextClickRef = useRef(false)
 
@@ -123,6 +194,10 @@ export function StickerChip({ entry, qty, onMarkHaveOne, onOpenEditor, visualThe
       if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current)
     }
   }, [])
+
+  useEffect(() => {
+    setFlagBroken(false)
+  }, [entry.id])
 
   const clearLongPressTimer = () => {
     if (longPressTimerRef.current) {
@@ -184,9 +259,36 @@ export function StickerChip({ entry, qty, onMarkHaveOne, onOpenEditor, visualThe
       style={chipStyle}
       aria-label={`Figurinha ${label}${ariaHint}. ${tapHint} Clique direito ou mantenha pressionado para definir a quantidade.`}
     >
-      <PrimaryLabel entry={entry} has={has} theme={visualTheme} />
+      {useFlagBg && flagUrl && !flagBroken ? (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-0 z-0 overflow-hidden rounded-xl"
+        >
+          <img
+            src={flagUrl}
+            alt=""
+            width={160}
+            height={112}
+            loading="lazy"
+            decoding="async"
+            referrerPolicy="no-referrer"
+            draggable={false}
+            onError={() => setFlagBroken(true)}
+            className="h-full w-full scale-105 object-cover opacity-[0.34]"
+          />
+          {backdrop ? (
+            <span
+              className={`absolute inset-0 z-[1] ${backdrop.className ?? ''}`}
+              style={backdrop.style}
+            />
+          ) : null}
+        </span>
+      ) : null}
+      <span className="relative z-[2] flex flex-col items-center justify-center gap-0.5">
+        <PrimaryLabel entry={entry} has={has} theme={visualTheme} />
+      </span>
       {dup > 0 && (
-        <span className="absolute -right-1 -top-1 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-bold text-white">
+        <span className="absolute -right-1 -top-1 z-[3] flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-bold text-white">
           {dup > 99 ? '99+' : dup}
         </span>
       )}
