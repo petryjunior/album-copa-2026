@@ -7,7 +7,7 @@ async function clipboard(text: string) {
 }
 
 export function MorePage({ notify }: { notify: (msg: string) => void }) {
-  const { exportJson, importJson, clearAll, catalog, state } = useCollection()
+  const { exportJson, importJson, clearAll, catalog, state, buildShareUrl } = useCollection()
   const [importArea, setImportArea] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -51,10 +51,40 @@ export function MorePage({ notify }: { notify: (msg: string) => void }) {
       </section>
 
       <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+        <h2 className="text-base font-black text-slate-900">Sincronizar entre aparelhos</h2>
+        <p className="mb-3 text-xs text-slate-600">
+          O site em <code className="text-slate-800">github.io</code> é o mesmo em qualquer dispositivo, mas cada
+          navegador guarda a coleção à parte. Copie o link aberto no fim (ele inclui os seus dados de forma
+          comprimida), envie para o outro telemóvel ou PC, abra o link e confirme a importação. Quem tiver acesso ao
+          link vê a mesma lista — trate como privado.
+        </p>
+        <button
+          type="button"
+          disabled={busy}
+          className="mb-2 w-full rounded-2xl bg-teal-700 px-4 py-3 text-sm font-bold text-white hover:bg-teal-800 disabled:opacity-50"
+          onClick={async () => {
+            try {
+              await clipboard(buildShareUrl())
+              notify('Link com a coleção copiado. Abra noutro aparelho e aceite importar.')
+            } catch {
+              notify('Copiar falhou; use “Copiar endereço” no navegador.')
+            }
+          }}
+        >
+          Copiar link com a minha coleção
+        </button>
+        <p className="text-[11px] text-slate-500">
+          Depois de alterar figurinhas, volte a copiar o link (ou use o JSON abaixo). Abas abertas no mesmo
+          navegador alinham sozinhas.
+        </p>
+      </section>
+
+      <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
         <h2 className="text-base font-black text-slate-900">Backup offline</h2>
         <p className="mb-3 text-xs text-slate-600">
-          O progresso só fica neste navegador. Exporte com frequência — o arquivo contém{' '}
-          <code className="text-slate-800">&quot;version&quot;: 3</code> alinhado à ordem física (Panini&nbsp;00, FWC inicial, seleções, FWC final).
+          O progresso fica no armazenamento local deste navegador até importar de outro sítio. Exporte com frequência — o
+          arquivo contém <code className="text-slate-800">&quot;version&quot;: 3</code> alinhado à ordem física
+          (Panini&nbsp;00, FWC inicial, seleções, FWC final).
         </p>
         <button
           type="button"

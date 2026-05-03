@@ -10,6 +10,7 @@ import {
 } from 'react'
 import type { PersistedShape } from '@/types/catalog'
 import { CATALOG } from '@/catalog/catalog'
+import { buildCollectionShareUrl, decodeCollectionFromHash } from '@/utils/collectionSyncLink'
 
 export const STORAGE_KEY = 'album-copa-2026-collection-v2026-physical-order'
 
@@ -98,6 +99,9 @@ type Ctx = {
   bulkAdd: (ids: number[], add: number) => void
   clearAll: () => void
   exportJson: () => string
+  /** Coleção compacta (apenas quantidades positivas) para link ou JSON minimal. */
+  exportPersistedShape: () => PersistedShape
+  buildShareUrl: () => string
   importJson: (raw: string) => { ok: true } | { ok: false; error: string }
 }
 
@@ -135,13 +139,17 @@ export function CollectionProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'clearAll' })
   }, [])
 
-  const exportJson = useCallback(() => {
+  const exportPersistedShape = useCallback((): PersistedShape => {
     const shape: PersistedShape = { version: 3, quantities: {} }
     for (const [k, v] of Object.entries(state)) {
       if (v > 0) shape.quantities[k] = v
     }
-    return JSON.stringify(shape, null, 2)
+    return shape
   }, [state])
+
+  const exportJson = useCallback(() => JSON.stringify(exportPersistedShape(), null, 2), [exportPersistedShape])
+
+  const buildShareUrl = useCallback(() => buildCollectionShareUrl(exportPersistedShape()), [exportPersistedShape])
 
   const importJson = useCallback((raw: string) => {
     try {
@@ -168,6 +176,48 @@ export function CollectionProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  /** Abrir site com `#album=…` — importa coleção após confirmação. */
+  useEffect(() => {
+    const parsed = decodeCollectionFromHash(window.location.hash)
+    if (!parsed) return
+    const ok = window.confirm(
+      'Este link contém uma coleção do álbum. Substituir os dados salvos neste aparelho?',
+    )
+    const path = `${window.location.pathname}${window.location.search}`
+    if (!ok) {
+      window.history.replaceState(null, '', path)
+      return
+    }
+    const next: State = {}
+    for (const [k, v] of Object.entries(parsed.quantities)) {
+      const id = Number(k)
+      if (!Number.isNaN(id)) next[id] = clampQty(Number(v))
+    }
+    dispatch({ type: 'hydrate', data: next })
+    window.history.replaceState(null, '', path)
+  }, [])
+
+  /** Outras abas / janelas do mesmo site — mantêm o mesmo armazenamento local alinhado. */
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== STORAGE_KEY || e.newValue == null) return
+      try {
+        const parsed = JSON.parse(e.newValue) as PersistedShape
+        if (parsed.version !== 3 || typeof parsed.quantities !== 'object' || !parsed.quantities) return
+        const next: State = {}
+        for (const [k, v] of Object.entries(parsed.quantities)) {
+          const id = Number(k)
+          if (!Number.isNaN(id)) next[id] = clampQty(Number(v))
+        }
+        dispatch({ type: 'hydrate', data: next })
+      } catch {
+        /* ignore */
+      }
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [])
+
   const value = useMemo<Ctx>(
     () => ({
       catalog: CATALOG,
@@ -178,9 +228,22 @@ export function CollectionProvider({ children }: { children: ReactNode }) {
       bulkAdd,
       clearAll,
       exportJson,
+      exportPersistedShape,
+      buildShareUrl,
       importJson,
     }),
-    [state, setQty, inc, bulkEnsureMin, bulkAdd, clearAll, exportJson, importJson],
+    [
+      state,
+      setQty,
+      inc,
+      bulkEnsureMin,
+      bulkAdd,
+      clearAll,
+      exportJson,
+      exportPersistedShape,
+      buildShareUrl,
+      importJson,
+    ],
   )
 
   return <CollectionContext.Provider value={value}>{children}</CollectionContext.Provider>
