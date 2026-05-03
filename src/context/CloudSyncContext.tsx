@@ -11,7 +11,7 @@ import { useAuth } from '@/context/AuthContext'
 import { useCollection } from '@/context/CollectionContext'
 import { getSupabase } from '@/lib/supabaseClient'
 import { fetchAlbumRow, upsertAlbumRow } from '@/sync/albumCloud'
-import { LOCAL_SAVED_AT_KEY } from '@/sync/constants'
+import { LAST_REMOTE_APPLIED_AT_KEY } from '@/sync/constants'
 
 const POLL_REMOTE_MS = 45_000
 
@@ -57,6 +57,12 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
     if (!supabase) return
     setLastCloudError(null)
     try {
+      const remote = await fetchAlbumRow(supabase, uid)
+      const lastRm = parseSavedAtMs(localStorage.getItem(LAST_REMOTE_APPLIED_AT_KEY))
+      if (remote && Date.parse(remote.updated_at) > lastRm) {
+        hydrateFromCloud(remote.data, remote.updated_at)
+        return
+      }
       const serverAt = await upsertAlbumRow(supabase, uid, exportRef.current())
       alignSavedAtFromServer(serverAt)
       setLastCloudPushAt(serverAt)
@@ -64,7 +70,7 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
       setLastCloudError(e instanceof Error ? e.message : 'Falha na sincronização automática.')
       throw e
     }
-  }, [uid, alignSavedAtFromServer])
+  }, [uid, alignSavedAtFromServer, hydrateFromCloud])
 
   const pushToCloudNow = useCallback(async (): Promise<boolean> => {
     const supabase = getSupabase()
@@ -75,6 +81,12 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
     setIsPushing(true)
     setLastCloudError(null)
     try {
+      const remote = await fetchAlbumRow(supabase, uid)
+      const lastRm = parseSavedAtMs(localStorage.getItem(LAST_REMOTE_APPLIED_AT_KEY))
+      if (remote && Date.parse(remote.updated_at) > lastRm) {
+        hydrateFromCloud(remote.data, remote.updated_at)
+        return true
+      }
       const serverAt = await upsertAlbumRow(supabase, uid, exportRef.current())
       alignSavedAtFromServer(serverAt)
       setLastCloudPushAt(serverAt)
@@ -85,11 +97,11 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsPushing(false)
     }
-  }, [uid, alignSavedAtFromServer])
+  }, [uid, alignSavedAtFromServer, hydrateFromCloud])
 
   /**
-   * Busca a nuvem e aplica se `updated_at` for mais recente que o último save local.
-   * Necessário para outro dispositivo ver alterações (o pull inicial só corre ao abrir a sessão).
+   * Busca a nuvem e aplica se o `updated_at` do servidor for mais recente do que
+   * o último que já incorporámos (não basta o “save local”, que sobe a cada toque no ecrã).
    */
   const pullRemoteIfNewer = useCallback(async () => {
     if (!uid) return
@@ -98,9 +110,9 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
     try {
       const remote = await fetchAlbumRow(supabase, uid)
       if (!remote) return
-      const localMs = parseSavedAtMs(localStorage.getItem(LOCAL_SAVED_AT_KEY))
+      const lastRm = parseSavedAtMs(localStorage.getItem(LAST_REMOTE_APPLIED_AT_KEY))
       const remoteMs = Date.parse(remote.updated_at)
-      if (remoteMs > localMs) {
+      if (remoteMs > lastRm) {
         hydrateFromCloud(remote.data, remote.updated_at)
       }
     } catch (e) {
@@ -127,7 +139,7 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
     ;(async () => {
       try {
         const remote = await fetchAlbumRow(supabase, uid)
-        const localMs = parseSavedAtMs(localStorage.getItem(LOCAL_SAVED_AT_KEY))
+        const lastRm = parseSavedAtMs(localStorage.getItem(LAST_REMOTE_APPLIED_AT_KEY))
 
         if (!remote) {
           const serverAt = await upsertAlbumRow(supabase, uid, exportRef.current())
@@ -140,9 +152,9 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
         }
 
         const remoteMs = Date.parse(remote.updated_at)
-        if (remoteMs > localMs) {
+        if (remoteMs > lastRm) {
           hydrateFromCloud(remote.data, remote.updated_at)
-        } else if (localMs > remoteMs) {
+        } else if (lastRm > remoteMs) {
           const serverAt = await upsertAlbumRow(supabase, uid, exportRef.current())
           if (!cancelled) {
             alignSavedAtFromServer(serverAt)

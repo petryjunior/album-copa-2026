@@ -11,7 +11,7 @@ import {
 } from 'react'
 import type { PersistedShape } from '@/types/catalog'
 import { CATALOG } from '@/catalog/catalog'
-import { LOCAL_SAVED_AT_KEY } from '@/sync/constants'
+import { LAST_REMOTE_APPLIED_AT_KEY, LOCAL_SAVED_AT_KEY } from '@/sync/constants'
 import { buildCollectionShareUrl, decodeCollectionFromHash } from '@/utils/collectionSyncLink'
 
 export const STORAGE_KEY = 'album-copa-2026-collection-v2026-physical-order'
@@ -158,6 +158,14 @@ export function CollectionProvider({ children }: { children: ReactNode }) {
 
   const clearAll = useCallback(() => {
     dispatch({ type: 'clearAll' })
+    try {
+      const now = new Date().toISOString()
+      localStorage.setItem(LOCAL_SAVED_AT_KEY, now)
+      localStorage.setItem(LAST_REMOTE_APPLIED_AT_KEY, now)
+      setLastLocalSavedAt(now)
+    } catch {
+      /* ignore */
+    }
   }, [])
 
   const exportPersistedShape = useCallback((): PersistedShape => {
@@ -174,6 +182,11 @@ export function CollectionProvider({ children }: { children: ReactNode }) {
 
   const hydrateFromCloud = useCallback((shape: PersistedShape, remoteUpdatedAt: string) => {
     pendingSavedAtRef.current = remoteUpdatedAt
+    try {
+      localStorage.setItem(LAST_REMOTE_APPLIED_AT_KEY, remoteUpdatedAt)
+    } catch {
+      /* ignore */
+    }
     const next: State = {}
     for (const [k, v] of Object.entries(shape.quantities)) {
       const id = Number(k)
@@ -185,6 +198,7 @@ export function CollectionProvider({ children }: { children: ReactNode }) {
   const alignSavedAtFromServer = useCallback((serverUpdatedAtIso: string) => {
     try {
       localStorage.setItem(LOCAL_SAVED_AT_KEY, serverUpdatedAtIso)
+      localStorage.setItem(LAST_REMOTE_APPLIED_AT_KEY, serverUpdatedAtIso)
       setLastLocalSavedAt(serverUpdatedAtIso)
     } catch {
       /* ignore */
@@ -210,6 +224,11 @@ export function CollectionProvider({ children }: { children: ReactNode }) {
         if (!Number.isNaN(id)) next[id] = clampQty(Number(v))
       }
       dispatch({ type: 'hydrate', data: next })
+      try {
+        localStorage.setItem(LAST_REMOTE_APPLIED_AT_KEY, new Date().toISOString())
+      } catch {
+        /* ignore */
+      }
       return { ok: true as const }
     } catch {
       return { ok: false as const, error: 'JSON inválido.' }
@@ -234,6 +253,11 @@ export function CollectionProvider({ children }: { children: ReactNode }) {
       if (!Number.isNaN(id)) next[id] = clampQty(Number(v))
     }
     dispatch({ type: 'hydrate', data: next })
+    try {
+      localStorage.setItem(LAST_REMOTE_APPLIED_AT_KEY, new Date().toISOString())
+    } catch {
+      /* ignore */
+    }
     window.history.replaceState(null, '', path)
   }, [])
 
