@@ -4,6 +4,7 @@ import { getTeamsUnique } from '@/catalog/catalog'
 import { StickerGrid } from '@/components/StickerGrid'
 import { useCollection } from '@/context/CollectionContext'
 import { TeamFlag } from '@/components/TeamFlag'
+import { getTeamTheme } from '@/lib/teamThemes'
 
 function TeamNameWithFlag({ code, name }: { code: string; name: string }) {
   return (
@@ -33,7 +34,7 @@ function teamMatchesFilter(t: TeamRow, qRaw: string): boolean {
 type SortMode = 'group' | 'alpha'
 
 export function TeamBrowser({ onPick }: { onPick: (entry: CatalogEntry) => void }) {
-  const { catalog, state } = useCollection()
+  const { catalog, state, setQty } = useCollection()
   const teams = useMemo(() => getTeamsUnique(), [])
   const [code, setCode] = useState<string | null>(null)
   const [filter, setFilter] = useState('')
@@ -173,29 +174,52 @@ export function TeamBrowser({ onPick }: { onPick: (entry: CatalogEntry) => void 
   }
 
   const team = teams.find((t) => t.code === code)!
+  const theme = getTeamTheme(team.code)
 
   return (
-    <div className="space-y-3 pb-36">
-      <div className="flex items-center gap-2">
+    <div
+      className="-mx-4 space-y-4 rounded-b-3xl px-4 pb-36 pt-1 sm:-mx-0 sm:rounded-3xl sm:px-5 sm:pb-36 sm:pt-2"
+      style={{ background: theme.pageGradient }}
+    >
+      <div
+        className="flex flex-wrap items-center gap-3 rounded-2xl border border-l-[6px] px-4 py-3 shadow-md backdrop-blur-sm"
+        style={{
+          backgroundColor: theme.headerSurface,
+          borderColor: theme.headerBorder,
+          borderLeftColor: theme.stripe,
+        }}
+      >
         <button
           type="button"
           onClick={() => setCode(null)}
-          className="rounded-2xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-100"
+          className="rounded-2xl border-2 bg-white/95 px-3 py-2 text-sm font-semibold shadow-sm transition hover:bg-white"
+          style={{ borderColor: theme.accent, color: theme.primaryDark }}
         >
           Voltar às seleções
         </button>
-        <div className="flex items-center gap-2 text-sm font-bold text-slate-900">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
           <TeamFlag
             code={team.code}
             title={`${team.group} · ${team.name}`}
-            className="!h-7 !w-10"
+            className="!h-8 !w-11 shrink-0 shadow-sm ring-2 ring-white"
           />
-          <span>
-            {team.group} · {team.name}
-          </span>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-[0.25em] opacity-70" style={{ color: theme.primary }}>
+              Grupo {team.group}
+            </p>
+            <p className="truncate text-lg font-black leading-tight" style={{ color: theme.primaryDark }}>
+              {team.name}
+            </p>
+          </div>
         </div>
       </div>
-      <StickerGrid entries={entries} qtyOf={(id) => state[id] ?? 0} onPick={onPick} />
+      <StickerGrid
+        entries={entries}
+        qtyOf={(id) => state[id] ?? 0}
+        onMarkHaveOne={(e) => setQty(e.id, 1)}
+        onOpenEditor={onPick}
+        visualTheme={theme}
+      />
     </div>
   )
 }

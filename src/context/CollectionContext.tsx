@@ -10,6 +10,7 @@ import {
 } from 'react'
 import type { PersistedShape } from '@/types/catalog'
 import { CATALOG } from '@/catalog/catalog'
+import { LOCAL_SAVED_AT_KEY } from '@/sync/constants'
 import { buildCollectionShareUrl, decodeCollectionFromHash } from '@/utils/collectionSyncLink'
 
 export const STORAGE_KEY = 'album-copa-2026-collection-v2026-physical-order'
@@ -67,6 +68,9 @@ function loadFromStorage(): State {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return {}
+    if (!localStorage.getItem(LOCAL_SAVED_AT_KEY)) {
+      localStorage.setItem(LOCAL_SAVED_AT_KEY, new Date().toISOString())
+    }
     const parsed = JSON.parse(raw) as PersistedShape
     if (parsed.version !== 3 || !parsed.quantities) return {}
     const out: State = {}
@@ -78,16 +82,6 @@ function loadFromStorage(): State {
   } catch {
     return {}
   }
-}
-
-function saveToStorage(state: State) {
-  const shape: PersistedShape = {
-    version: 3,
-    quantities: Object.fromEntries(
-      Object.entries(state).map(([k, v]) => [k, v]),
-    ),
-  }
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(shape))
 }
 
 type Ctx = {
@@ -103,6 +97,8 @@ type Ctx = {
   exportPersistedShape: () => PersistedShape
   buildShareUrl: () => string
   importJson: (raw: string) => { ok: true } | { ok: false; error: string }
+  /** Substituir estado a partir da nuvem sem alterar o critério LWW do próximo save. */
+  hydrateFromCloud: (shape: PersistedShape, remoteUpdatedAt: string) => void
 }
 
 const CollectionContext = createContext<Ctx | null>(null)
@@ -110,6 +106,18 @@ const CollectionContext = createContext<Ctx | null>(null)
 export function CollectionProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, {}, () => loadFromStorage())
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pendingSavedAtRef = useRef<string | null>(null)
+
+  function saveToStorage(next: State) {
+    const shape: PersistedShape = {
+      version: 3,
+      quantities: Object.fromEntries(Object.entries(next).map(([k, v]) => [k, v])),
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(shape))
+    const at = pendingSavedAtRef.current ?? new Date().toISOString()
+    pendingSavedAtRef.current = null
+    localStorage.setItem(LOCAL_SAVED_AT_KEY, at)
+  }
 
   useEffect(() => {
     if (saveTimer.current) clearTimeout(saveTimer.current)
@@ -150,6 +158,16 @@ export function CollectionProvider({ children }: { children: ReactNode }) {
   const exportJson = useCallback(() => JSON.stringify(exportPersistedShape(), null, 2), [exportPersistedShape])
 
   const buildShareUrl = useCallback(() => buildCollectionShareUrl(exportPersistedShape()), [exportPersistedShape])
+
+  const hydrateFromCloud = useCallback((shape: PersistedShape, remoteUpdatedAt: string) => {
+    pendingSavedAtRef.current = remoteUpdatedAt
+    const next: State = {}
+    for (const [k, v] of Object.entries(shape.quantities)) {
+      const id = Number(k)
+      if (!Number.isNaN(id)) next[id] = clampQty(Number(v))
+    }
+    dispatch({ type: 'hydrate', data: next })
+  }, [])
 
   const importJson = useCallback((raw: string) => {
     try {
@@ -231,6 +249,7 @@ export function CollectionProvider({ children }: { children: ReactNode }) {
       exportPersistedShape,
       buildShareUrl,
       importJson,
+      hydrateFromCloud,
     }),
     [
       state,
@@ -243,6 +262,7 @@ export function CollectionProvider({ children }: { children: ReactNode }) {
       exportPersistedShape,
       buildShareUrl,
       importJson,
+      hydrateFromCloud,
     ],
   )
 

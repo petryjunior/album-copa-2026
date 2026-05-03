@@ -40,7 +40,7 @@ const TEAMS_ORDER = [
   { group: 'H', code: 'URU', name: 'Uruguai' },
   { group: 'I', code: 'FRA', name: 'França' },
   { group: 'I', code: 'SEN', name: 'Senegal' },
-  { group: 'I', code: 'POI', name: 'Vencedor repescagem Grupo I' },
+  { group: 'I', code: 'IRQ', name: 'Iraque' },
   { group: 'I', code: 'NOR', name: 'Noruega' },
   { group: 'J', code: 'ARG', name: 'Argentina' },
   { group: 'J', code: 'ALG', name: 'Argélia' },

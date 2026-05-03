@@ -40,7 +40,7 @@ const CODE_TO_FLAGCDN_SLUG: Record<string, string | null> = {
   URU: 'uy',
   FRA: 'fr',
   SEN: 'sn',
-  POI: null,
+  IRQ: 'iq',
   NOR: 'no',
   ARG: 'ar',
   ALG: 'dz',
@@ -91,9 +91,6 @@ const FLAG_ENG = String.fromCodePoint(
   0xe007f,
 )
 
-/** Placeholder when the participant is not yet known (repescagem). */
-const FLAG_TBD = '\u{1F3F3}\u{FE0F}'
-
 const CODE_TO_FLAG: Record<string, string> = {
   MEX: regionalPair('MX'),
   RSA: regionalPair('ZA'),
@@ -129,7 +126,7 @@ const CODE_TO_FLAG: Record<string, string> = {
   URU: regionalPair('UY'),
   FRA: regionalPair('FR'),
   SEN: regionalPair('SN'),
-  POI: FLAG_TBD,
+  IRQ: regionalPair('IQ'),
   NOR: regionalPair('NO'),
   ARG: regionalPair('AR'),
   ALG: regionalPair('DZ'),

@@ -1,6 +1,8 @@
 import { useDeferredValue, useMemo, useState } from 'react'
 import type { CatalogEntry } from '@/types/catalog'
+import { AuthProvider } from '@/context/AuthContext'
 import { CollectionProvider, useCollection } from '@/context/CollectionContext'
+import { CloudSyncBridge } from '@/components/CloudSyncBridge'
 import { BottomTabs, type TabId } from '@/components/BottomTabs'
 import { PasteToolbar } from '@/components/PasteToolbar'
 import { StickerEditorSheet } from '@/components/StickerEditorSheet'
@@ -30,7 +32,7 @@ function matchesQuery(entry: CatalogEntry, qRaw: string) {
 }
 
 function AppShell() {
-  const { catalog, state } = useCollection()
+  const { catalog, state, setQty } = useCollection()
   const [tab, setTab] = useState<TabId>('todas')
   const [query, setQuery] = useState('')
   const deferredQuery = useDeferredValue(query)
@@ -85,7 +87,7 @@ function AppShell() {
 
         {tab === 'extras' && (
           <p className="mb-4 text-sm leading-relaxed text-slate-700">
-            Aqui aparecem a figurinha <strong>00</strong> da Panini, os cromos <strong>FWC 1 a 8</strong> (antes das seleções) e os <strong>FWC 9 a 19</strong> (fechamento do álbum). Detalhes gráficos exatos vêm do verso / brochura — use o campo <em>metalizada</em> no código quando souber quais números têm acabamento especial.
+            Aqui aparecem a figurinha <strong>00</strong> da Panini, os cromos <strong>FWC 1 a 8</strong> (antes das seleções) e os <strong>FWC 9 a 19</strong> (fechamento do álbum).
           </p>
         )}
 
@@ -93,7 +95,8 @@ function AppShell() {
           <StickerGrid
             entries={filtered}
             qtyOf={(id) => state[id] ?? 0}
-            onPick={(e) => setActiveEntry(e)}
+            onMarkHaveOne={(e) => setQty(e.id, 1)}
+            onOpenEditor={(e) => setActiveEntry(e)}
           />
         )}
 
@@ -121,8 +124,11 @@ function AppShell() {
 
 export default function App() {
   return (
-    <CollectionProvider>
-      <AppShell />
-    </CollectionProvider>
+    <AuthProvider>
+      <CollectionProvider>
+        <CloudSyncBridge />
+        <AppShell />
+      </CollectionProvider>
+    </AuthProvider>
   )
 }

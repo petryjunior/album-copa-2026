@@ -25,9 +25,12 @@ const EXTRA_NAME_TO_CODE_MAP: Record<string, string> = {
   croacia: 'CRO',
   inglaterra: 'ENG',
   'nova zelandia': 'NZL',
-  'repescagem grupo i': 'POI',
-  'vencedor repescagem': 'POI',
-  repescagem: 'POI',
+  'repescagem grupo i': 'IRQ',
+  'vencedor repescagem': 'IRQ',
+  repescagem: 'IRQ',
+  iraque: 'IRQ',
+  iraq: 'IRQ',
+  poi: 'IRQ',
   'rep dem congo': 'COD',
 }
 

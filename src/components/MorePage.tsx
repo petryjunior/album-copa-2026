@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useAuth } from '@/context/AuthContext'
 import { useCollection } from '@/context/CollectionContext'
 import { buildShareDuplicatesText, buildShareMissingText } from '@/utils/shareTexts'
 
@@ -8,6 +9,7 @@ async function clipboard(text: string) {
 
 export function MorePage({ notify }: { notify: (msg: string) => void }) {
   const { exportJson, importJson, clearAll, catalog, state, buildShareUrl } = useCollection()
+  const { user, loading: authLoading, cloudConfigured, signInWithGoogle, signOut } = useAuth()
   const [importArea, setImportArea] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -51,32 +53,81 @@ export function MorePage({ notify }: { notify: (msg: string) => void }) {
       </section>
 
       <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 className="text-base font-black text-slate-900">Sincronizar entre aparelhos</h2>
-        <p className="mb-3 text-xs text-slate-600">
-          O site em <code className="text-slate-800">github.io</code> é o mesmo em qualquer dispositivo, mas cada
-          navegador guarda a coleção à parte. Copie o link aberto no fim (ele inclui os seus dados de forma
-          comprimida), envie para o outro telemóvel ou PC, abra o link e confirme a importação. Quem tiver acesso ao
-          link vê a mesma lista — trate como privado.
-        </p>
-        <button
-          type="button"
-          disabled={busy}
-          className="mb-2 w-full rounded-2xl bg-teal-700 px-4 py-3 text-sm font-bold text-white hover:bg-teal-800 disabled:opacity-50"
-          onClick={async () => {
-            try {
-              await clipboard(buildShareUrl())
-              notify('Link com a coleção copiado. Abra noutro aparelho e aceite importar.')
-            } catch {
-              notify('Copiar falhou; use “Copiar endereço” no navegador.')
-            }
-          }}
-        >
-          Copiar link com a minha coleção
-        </button>
-        <p className="text-[11px] text-slate-500">
-          Depois de alterar figurinhas, volte a copiar o link (ou use o JSON abaixo). Abas abertas no mesmo
-          navegador alinham sozinhas.
-        </p>
+        <h2 className="text-base font-black text-slate-900">Conta e sincronização</h2>
+        {authLoading ? (
+          <p className="text-xs text-slate-500">A carregar sessão…</p>
+        ) : cloudConfigured ? (
+          <>
+            {user ? (
+              <>
+                <p className="mb-1 text-xs text-slate-700">
+                  Sessão: <span className="font-semibold">{user.email ?? user.id.slice(0, 8)}…</span>
+                </p>
+                <p className="mb-3 text-xs leading-relaxed text-slate-600">
+                  A coleção sincroniza automaticamente com a nuvem (alguns segundos depois de cada alteração). Noutro
+                  telemóvel ou PC, abra o mesmo site e entre com a mesma conta Google — não precisa copiar links.
+                </p>
+                <button
+                  type="button"
+                  className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+                  onClick={async () => {
+                    await signOut()
+                    notify('Sessão terminada neste aparelho.')
+                  }}
+                >
+                  Sair da conta
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="mb-3 text-xs leading-relaxed text-slate-600">
+                  Entre com Google para guardar o álbum na nuvem Supabase. Em qualquer dispositivo, use o mesmo login —
+                  os dados sobem e descem sozinhos (última alteração ganha quando há conflito).
+                </p>
+                <button
+                  type="button"
+                  disabled={busy}
+                  className="mb-4 w-full rounded-2xl bg-teal-700 px-4 py-3 text-sm font-bold text-white hover:bg-teal-800 disabled:opacity-50"
+                  onClick={() => {
+                    void signInWithGoogle()
+                  }}
+                >
+                  Entrar com Google
+                </button>
+              </>
+            )}
+          </>
+        ) : (
+          <p className="mb-3 text-xs leading-relaxed text-amber-900">
+            Sincronização na nuvem não está configurada neste build (faltam{' '}
+            <code className="rounded bg-amber-100 px-1">VITE_SUPABASE_*</code>). Use o backup JSON ou o link abaixo.
+          </p>
+        )}
+
+        <details className="group mt-2 rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 px-3 py-2">
+          <summary className="cursor-pointer text-xs font-semibold text-slate-600">
+            Alternativa sem conta — link comprido
+          </summary>
+          <p className="mt-2 text-[11px] leading-relaxed text-slate-600">
+            Copia um endereço que embute a coleção no próprio URL. Qualquer pessoa com o link vê os dados — use só se
+            precisar e trate como privado.
+          </p>
+          <button
+            type="button"
+            disabled={busy}
+            className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-100 disabled:opacity-50"
+            onClick={async () => {
+              try {
+                await clipboard(buildShareUrl())
+                notify('Link copiado. Abra noutro aparelho e aceite importar.')
+              } catch {
+                notify('Copiar falhou.')
+              }
+            }}
+          >
+            Copiar link com a coleção
+          </button>
+        </details>
       </section>
 
       <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
