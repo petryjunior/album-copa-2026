@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { parseStickerInput } from '@/utils/ranges'
+import { resolveAlbumStickerList } from '@/utils/parseAlbumCodes'
 import { useCollection } from '@/context/CollectionContext'
 
 export function PasteToolbar({ onToast }: { onToast: (msg: string) => void }) {
@@ -7,14 +7,21 @@ export function PasteToolbar({ onToast }: { onToast: (msg: string) => void }) {
   const [raw, setRaw] = useState('')
 
   function apply(kind: 'min1' | 'add1') {
-    const ids = parseStickerInput(raw, catalog[catalog.length - 1]?.id ?? 980)
-    if (!ids.length) {
-      onToast('Digite pelo menos um número válido.')
+    const res = resolveAlbumStickerList(raw, catalog)
+    if (!res.ids.length) {
+      onToast(res.errors.slice(0, 3).join(' ') + (res.errors.length > 3 ? ' …' : ''))
       return
     }
-    if (kind === 'min1') bulkEnsureMin(ids, 1)
-    else bulkAdd(ids, 1)
-    onToast(kind === 'min1' ? `Marcadas com ≥1 (${ids.length}).` : `Somado +1 em ${ids.length} figurinhas.`)
+
+    const warn = res.errors.length ? `\n⚠️ ${res.errors.slice(0, 2).join(' ')}` : ''
+
+    if (kind === 'min1') {
+      bulkEnsureMin(res.ids, 1)
+      onToast(`Registrei “pelo menos 1” em ${res.ids.length} figurinha(s).${warn}`)
+    } else {
+      bulkAdd(res.ids, 1)
+      onToast(`Somei +1 repetida em ${res.ids.length} figurinha(s).${warn}`)
+    }
     setRaw('')
   }
 
@@ -25,8 +32,8 @@ export function PasteToolbar({ onToast }: { onToast: (msg: string) => void }) {
       </label>
       <textarea
         value={raw}
-        placeholder="Ex.: 1, 45, 80-93"
-        rows={2}
+        placeholder="Ex.: 00, FWC 3, FWC 1–5, BRA 12, Brasil 13–14"
+        rows={3}
         onChange={(e) => setRaw(e.target.value)}
         className="mb-3 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none ring-teal-500/30 focus:bg-white focus:ring-4"
       />
@@ -34,23 +41,36 @@ export function PasteToolbar({ onToast }: { onToast: (msg: string) => void }) {
         <button
           type="button"
           onClick={() => apply('min1')}
-          className="flex-1 min-w-[140px] rounded-2xl bg-teal-700 px-3 py-3 text-xs font-semibold text-white hover:bg-teal-800 sm:text-sm"
+          title="Para cada figurinha listada abaixo, se você ainda está com quantidade zero, marca como tendo pelo menos uma."
+          className="flex-1 min-w-[140px] rounded-2xl bg-teal-700 px-3 py-3 text-xs font-semibold leading-snug text-white hover:bg-teal-800 sm:text-sm"
         >
-          Garantir 1 cópia
+          Tenho estas (pelo menos 1)
         </button>
         <button
           type="button"
           onClick={() => apply('add1')}
-          className="flex-1 min-w-[140px] rounded-2xl border border-teal-200 bg-teal-50 px-3 py-3 text-xs font-semibold text-teal-900 hover:bg-teal-100 sm:text-sm"
+          title="Soma mais 1 repetida em cada figurinha reconhecida (útil quando abrir pacotes)."
+          className="flex-1 min-w-[140px] rounded-2xl border border-teal-200 bg-teal-50 px-3 py-3 text-xs font-semibold leading-snug text-teal-950 hover:bg-teal-100 sm:text-sm"
         >
-          Somar +1 em cada
+          +1 repetida em cada
         </button>
       </div>
-      <p className="mt-3 text-[11px] leading-snug text-slate-500">
-        Use os <strong># (1–980)</strong>, iguais à ordem física ({' '}
-        <strong>Panini</strong>, <strong>FWC inicial</strong>, <strong>seleções</strong>,{' '}
-        <strong>FWC final</strong>). Separe vírgulas, espaços ou quebras — intervalos funcionam (<code className="text-slate-800">10-20</code>,{' '}
-        <code className="text-slate-800">960-969</code>).
+      <p className="mt-3 space-y-1 text-[11px] leading-snug text-slate-600">
+        <span className="block">
+          Separe <strong className="font-semibold text-slate-700">somente por vírgula</strong> cada entrada (não use
+          espaço ou ponto e vírgula entre figurinhas).
+          <br />
+          • <strong>Panini 00:</strong>{' '}
+          <code className="rounded bg-slate-100 px-1 text-slate-900">00</code> ou{' '}
+          <code className="rounded bg-slate-100 px-1 text-slate-900">panini</code>
+          <br />• <strong>Especiais FWC:</strong>{' '}
+          <code className="rounded bg-slate-100 px-1 text-slate-900">FWC 7</code> ou intervalo{' '}
+          <code className="rounded bg-slate-100 px-1 text-slate-900">FWC 9–13</code>
+          <br />• <strong>Seleção (número 1–20 do país):</strong>{' '}
+          <code className="rounded bg-slate-100 px-1 text-slate-900">BRA 12</code>,{' '}
+          <code className="rounded bg-slate-100 px-1 text-slate-900">Brasil 12–14</code>,
+          mesmo com <code className="rounded bg-slate-100 px-1 text-slate-900">Mex 3–5</code>
+        </span>
       </p>
     </div>
   )

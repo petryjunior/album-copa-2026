@@ -26,9 +26,15 @@ export function StickerEditorSheet({ entry, onClose }: Props) {
   return (
     <BottomSheet open title={title} onClose={onClose}>
       <p className="mb-1 text-sm text-slate-600">{subtitle}</p>
-      <p className="mb-4 text-xs text-slate-500">
-        Posição de colagem em lote neste app: <strong className="text-slate-800">#{entry.id}</strong> (1–980 na ordem do álbum).
-      </p>
+      <details className="mb-4 text-xs text-slate-500 [&_summary]:cursor-pointer [&_summary]:text-slate-600">
+        <summary className="font-medium text-slate-600">Migrar coleção via número interno (opcional)</summary>
+        <p className="mt-2 text-slate-500">
+          Só aparece aos que importaram backups gerados antes desta página: na colagem use{' '}
+          <kbd className="rounded border border-slate-200 px-1">#{entry.id}</kbd> ou{' '}
+          <kbd className="rounded border border-slate-200 px-1">INTERNO {entry.id}</kbd> — são ordem física técnica não
+          impresso na figurinha seleção/FWC/Panini.
+        </p>
+      </details>
       {entry.metalizada && (
         <p className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950">
           Cromo com acabamento especial (metalizado) segundo a coleção oficial.
@@ -71,7 +77,7 @@ export function StickerEditorSheet({ entry, onClose }: Props) {
       </div>
       <p className="mt-4 text-xs text-slate-500">
         Informe quantas figurinhas iguais você tem no total no bolso/arquivo. Todas que passam da primeira
-        viram repetidas nos números de troca acima da figurinha na grade.
+        viram repetidas: o marcador rosado no canto mostra quantas cópias a mais você tem da mesma figurinha.
       </p>
     </BottomSheet>
   )

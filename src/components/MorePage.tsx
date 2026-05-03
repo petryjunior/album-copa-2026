@@ -14,7 +14,7 @@ export function MorePage({ notify }: { notify: (msg: string) => void }) {
   return (
     <div className="space-y-4 pb-40 text-sm text-slate-800">
       <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 className="text-base font-black text-slate-900">Compartilhar (troca rápido)</h2>
+        <h2 className="text-base font-black text-slate-900">Compartilhar texto</h2>
         <p className="mb-4 text-xs text-slate-600">
           Textos compatíveis com mensagens tipo WhatsApp. Ajuste à vontade depois de colar.
         </p>

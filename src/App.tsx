@@ -83,8 +83,6 @@ function AppShell() {
           </div>
         )}
 
-        {(tab === 'todas' || tab === 'faltando') && <PasteToolbar onToast={notify} />}
-
         {tab === 'extras' && (
           <p className="mb-4 text-sm leading-relaxed text-slate-700">
             Aqui aparecem a figurinha <strong>00</strong> da Panini, os cromos <strong>FWC 1 a 8</strong> (antes das seleções) e os <strong>FWC 9 a 19</strong> (fechamento do álbum). Detalhes gráficos exatos vêm do verso / brochura — use o campo <em>metalizada</em> no código quando souber quais números têm acabamento especial.
@@ -97,6 +95,12 @@ function AppShell() {
             qtyOf={(id) => state[id] ?? 0}
             onPick={(e) => setActiveEntry(e)}
           />
+        )}
+
+        {(tab === 'todas' || tab === 'faltando') && (
+          <div className="mt-8">
+            <PasteToolbar onToast={notify} />
+          </div>
         )}
 
         {tab === 'times' && <TeamBrowser onPick={setActiveEntry} />}

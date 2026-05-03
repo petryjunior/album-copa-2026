@@ -1,5 +1,6 @@
 import { collectionStats } from '@/utils/stats'
 import { useCollection } from '@/context/CollectionContext'
+import { DEV_SOURCE_MARK } from '@/workspaceMark'
 
 export function SummaryHeader({ query }: { query: string }) {
   const { catalog, state } = useCollection()
@@ -9,11 +10,23 @@ export function SummaryHeader({ query }: { query: string }) {
     <header className="sticky top-0 z-20 border-b border-slate-200/80 bg-slate-50/95 px-4 pb-4 pt-[max(env(safe-area-inset-top),0.75rem)] backdrop-blur">
       <div className="mb-3 flex items-center justify-between gap-2">
         <div>
-          <h1 className="text-xl font-black tracking-tight text-slate-900">Copa 2026</h1>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <h1 className="text-xl font-black tracking-tight text-slate-900">Copa 2026</h1>
+            {import.meta.env.DEV ? (
+              <span className="rounded-md bg-amber-400 px-2 py-0.5 text-[10px] font-black uppercase text-amber-950 ring-2 ring-amber-500/40">
+                Dev
+              </span>
+            ) : null}
+          </div>
           <p className="text-xs text-slate-600">
             Panini FIFA WC 2026 · 980 posições (00 · FWC · seleções)
             {query.trim() ? ' · filtro ligado' : ''}
           </p>
+          {import.meta.env.DEV ? (
+            <p className="mt-1 select-all rounded bg-orange-50 px-1 py-0.5 font-mono text-[10px] leading-tight text-orange-900 ring-1 ring-orange-300/60">
+              {DEV_SOURCE_MARK} — se não vê isto, o dev server não é esta pasta
+            </p>
+          ) : null}
         </div>
         <div className="rounded-2xl border border-teal-200 bg-teal-50 px-3 py-1.5 text-right">
           <div className="text-lg font-black leading-none text-teal-900">{s.pct}%</div>
@@ -31,7 +44,7 @@ export function SummaryHeader({ query }: { query: string }) {
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white px-2 py-2 shadow-sm">
           <div className="text-base font-bold text-rose-700">{s.duplicateTotal}</div>
-          <div className="text-[11px] text-slate-600">Extras / troca</div>
+          <div className="text-[11px] text-slate-600">Repetidas</div>
         </div>
       </div>
     </header>

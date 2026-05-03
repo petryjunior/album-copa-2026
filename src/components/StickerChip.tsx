@@ -19,6 +19,13 @@ type Props = {
   onOpen: () => void
 }
 
+/** O que aparece impresso atrás/album — não usamos número global ao utilizador. */
+function stickerPublicLabel(entry: CatalogEntry): string {
+  if (entry.segment === 'panini') return 'Panini 00'
+  if (entry.segment === 'fwc') return `FWC ${entry.fwcNumber}`
+  return `${entry.teamCode} · ${entry.displayPrinted}`
+}
+
 function PrimaryLabel({ entry, has }: { entry: CatalogEntry; has: boolean }) {
   if (entry.segment === 'team') {
     const codeClr = has ? 'text-teal-50' : 'text-slate-500'
@@ -43,13 +50,6 @@ function PrimaryLabel({ entry, has }: { entry: CatalogEntry; has: boolean }) {
   )
 }
 
-function hashTone(entry: CatalogEntry, has: boolean) {
-  if (!has) {
-    return entry.metalizada ? 'text-amber-900/45' : 'text-slate-400'
-  }
-  return entry.metalizada ? 'text-white/65' : 'text-teal-900/65'
-}
-
 export function StickerChip({ entry, qty, onOpen }: Props) {
   const has = qty >= 1
   const dup = Math.max(0, qty - 1)
@@ -58,12 +58,9 @@ export function StickerChip({ entry, qty, onOpen }: Props) {
       type="button"
       onClick={onOpen}
       className={chipClass(entry, has)}
-      aria-label={`Figurinha ${entry.displayPrinted}${entry.segment === 'team' ? ` ${entry.teamName}` : ''}, posição ${entry.id}${has ? ', marcada' : ', falta'}`}
+      aria-label={`Figurinha ${stickerPublicLabel(entry)}${has ? ', registada como tendo pelo menos uma' : ', falta'}`}
     >
       <PrimaryLabel entry={entry} has={has} />
-      <span className={`absolute bottom-0.5 right-1 text-[7px] font-medium tabular-nums ${hashTone(entry, has)}`}>
-        #{entry.id}
-      </span>
       {dup > 0 && (
         <span className="absolute -right-1 -top-1 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-bold text-white">
           {dup > 99 ? '99+' : dup}

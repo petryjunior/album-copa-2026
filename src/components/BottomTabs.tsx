@@ -2,7 +2,7 @@ const tabs = [
   { id: 'todas' as const, label: 'Todas' },
   { id: 'faltando' as const, label: 'Faltando' },
   { id: 'times' as const, label: 'Seleções' },
-  { id: 'extras' as const, label: 'Extras' },
+  { id: 'extras' as const, label: 'Especiais' },
   { id: 'mais' as const, label: 'Mais' },
 ]
 

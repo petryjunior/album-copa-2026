@@ -24,7 +24,10 @@ npm install
 npm run dev
 ```
 
-O terminal mostrará algo como `http://localhost:5173`. Use `cd album-copa-2026` antes se esta pasta não for a raiz do clone.
+O terminal imprime primeiro o **caminho absoluto** da pasta onde o servidor lê os ficheiros: no Cursor deve abrir **essa mesma pasta** com **Ficheiro → Abrir Pasta…**. Se mantiver dois clones (por exemplo cópia no Windows e `~/github/album-copa-2026` no WSL) sem `git pull`/sincronizar, vai parecer que o código «nunca muda» — o navegador servia outro árvore.
+
+Depois disso aparece algo como **`http://localhost:5173`**. Corra `npm run dev` na raiz do clone onde edita.
+
 
 Gerar apenas o arquivo JSON público (opcional, espelha o TS):
 

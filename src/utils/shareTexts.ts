@@ -23,5 +23,5 @@ export function buildShareDuplicatesText(
     })
     .filter((x): x is string => x !== null)
   const totalDup = catalog.reduce((acc, e) => acc + Math.max(0, (quantities[e.id] ?? 0) - 1), 0)
-  return `Figurinhas repetidas (total cópias extras: ${totalDup}): ${entries.join(', ') || '—'}`
+  return `Figurinhas repetidas (total ${totalDup} figurinhas além da primeira no álbum): ${entries.join(', ') || '—'}`
 }
