@@ -42,7 +42,7 @@ export function DuplicatesBottomSection({ onOpenSticker }: Props) {
             Repetidas
           </h2>
           <p className="mt-1 text-xs leading-relaxed text-slate-500">
-            Cópias além da primeira no álbum. Toque numa figurinha para abrir o editor de quantidade.
+            Cópias além da primeira no álbum. Toque em uma figurinha para abrir o editor de quantidade.
           </p>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-center text-xs font-medium text-slate-700 shadow-sm sm:justify-self-end">
@@ -53,7 +53,7 @@ export function DuplicatesBottomSection({ onOpenSticker }: Props) {
 
       {s.duplicateTotal === 0 ? (
         <div className="rounded-2xl border border-slate-200 bg-white px-4 py-6 text-center shadow-sm">
-          <p className="text-sm text-slate-600">Sem figurinhas repetidas registadas.</p>
+          <p className="text-sm text-slate-600">Sem figurinhas repetidas registradas.</p>
         </div>
       ) : (
         <ul className="space-y-2">

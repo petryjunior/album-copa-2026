@@ -27,9 +27,9 @@ export function StickerEditorSheet({ entry, onClose }: Props) {
     <BottomSheet open title={title} onClose={onClose}>
       <p className="mb-1 text-sm text-slate-600">{subtitle}</p>
       <p className="mb-3 text-xs text-slate-500">
-        Na grelha: toque ou clique para alternar entre <strong>sem</strong> cópia e ter <strong>1</strong> cópia (com
-        pelo menos uma, toque de novo limpa); mantenha premido (telemóvel) ou clique direito (rato) para abrir esta folha
-        e escolher outra quantidade.
+        Na grade: toque ou clique para alternar entre <strong>sem</strong> cópia e ter <strong>1</strong> cópia (com
+        pelo menos uma, toque de novo para limpar); mantenha pressionado (celular) ou clique com o botão direito (mouse)
+        para abrir este painel e escolher outra quantidade.
       </p>
       <details className="mb-4 text-xs text-slate-500 [&_summary]:cursor-pointer [&_summary]:text-slate-600">
         <summary className="font-medium text-slate-600">Migrar coleção via número interno (opcional)</summary>

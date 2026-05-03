@@ -58,13 +58,13 @@ type Props = {
   qty: number
   /** Toque / clique esquerdo: alternar marcar 1 vs limpar (0) */
   onMarkHaveOne: () => void
-  /** Clique direito (desktop) ou manter (telemóvel): escolher quantidade */
+  /** Clique direito (desktop) ou manter pressionado (celular): escolher quantidade */
   onOpenEditor: () => void
   /** Quando definido (vista Seleções → país), cromos usam as cores da seleção */
   visualTheme?: TeamVisualTheme | null
 }
 
-/** O que aparece impresso atrás/album — não usamos número global ao utilizador. */
+/** O que aparece impresso atrás / no álbum — não usamos número global para o usuário. */
 function stickerPublicLabel(entry: CatalogEntry): string {
   if (entry.segment === 'panini') return 'Panini 00'
   if (entry.segment === 'fwc') return `FWC ${entry.fwcNumber}`
@@ -164,7 +164,7 @@ export function StickerChip({ entry, qty, onMarkHaveOne, onOpenEditor, visualThe
 
   const label = stickerPublicLabel(entry)
   const ariaHint = has
-    ? ', registada como tendo pelo menos uma'
+    ? ', registrada como tendo pelo menos uma'
     : ', falta'
   const tapHint = has
     ? 'Toque ou clique para limpar (quantidade 0).'
@@ -179,7 +179,7 @@ export function StickerChip({ entry, qty, onMarkHaveOne, onOpenEditor, visualThe
       onTouchEnd={handleTouchEndOrCancel}
       onTouchCancel={handleTouchEndOrCancel}
       onTouchMove={handleTouchMove}
-      title="Toque: marcar 1 ou limpar · Manter / clique direito: quantidade"
+      title="Toque: marcar 1 ou limpar · Segure / clique direito: quantidade"
       className={chipCls}
       style={chipStyle}
       aria-label={`Figurinha ${label}${ariaHint}. ${tapHint} Clique direito ou mantenha pressionado para definir a quantidade.`}

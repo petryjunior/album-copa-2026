@@ -88,7 +88,7 @@ function loadFromStorage(): State {
 type Ctx = {
   catalog: typeof CATALOG
   state: State
-  /** ISO timestamp da última gravação no armazenamento local deste navegador */
+  /** ISO timestamp do último salvamento no armazenamento local deste navegador */
   lastLocalSavedAt: string | null
   setQty: (id: number, qty: number) => void
   inc: (id: number, delta: number) => void
@@ -210,7 +210,7 @@ export function CollectionProvider({ children }: { children: ReactNode }) {
     const parsed = decodeCollectionFromHash(window.location.hash)
     if (!parsed) return
     const ok = window.confirm(
-      'Este link contém uma coleção do álbum. Substituir os dados salvos neste aparelho?',
+      'Este link contém uma coleção do álbum. Substituir os dados salvos neste dispositivo?',
     )
     const path = `${window.location.pathname}${window.location.search}`
     if (!ok) {

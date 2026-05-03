@@ -79,7 +79,7 @@ function clampInt(a: number, lo: number, hi: number) {
   return Math.min(hi, Math.max(lo, a))
 }
 
-/** Resolve texto colado pelo utilizador para IDs internos (base de dados no telemóvel). */
+/** Resolve texto colado pelo usuário para IDs internos (dados no celular). */
 export function resolveAlbumStickerList(
   raw: string,
   catalog: CatalogEntry[],

@@ -4,7 +4,7 @@
  */
 
 export type TeamVisualTheme = {
-  /** Fundo suave detrás da grelha */
+  /** Fundo suave atrás da grade */
   pageGradient: string
   headerSurface: string
   headerBorder: string

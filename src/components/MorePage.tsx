@@ -8,11 +8,11 @@ async function clipboard(text: string) {
   await navigator.clipboard.writeText(text)
 }
 
-function formatPtIso(iso: string | null): string {
+function formatDateTimeBr(iso: string | null): string {
   if (!iso) return '—'
   const t = Date.parse(iso)
   if (Number.isNaN(t)) return '—'
-  return new Date(t).toLocaleString('pt-PT', { dateStyle: 'short', timeStyle: 'short' })
+  return new Date(t).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
 }
 
 export function MorePage({ notify }: { notify: (msg: string) => void }) {
@@ -27,7 +27,7 @@ export function MorePage({ notify }: { notify: (msg: string) => void }) {
       <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
         <h2 className="text-base font-black text-slate-900">Compartilhar texto</h2>
         <p className="mb-4 text-xs text-slate-600">
-          Textos compatíveis com mensagens tipo WhatsApp. Ajuste à vontade depois de colar.
+          Textos compatíveis com mensagens tipo WhatsApp. Ajuste como quiser depois de colar.
         </p>
         <div className="grid gap-2 sm:grid-cols-2">
           <button
@@ -64,7 +64,7 @@ export function MorePage({ notify }: { notify: (msg: string) => void }) {
       <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
         <h2 className="text-base font-black text-slate-900">Conta e sincronização</h2>
         {authLoading ? (
-          <p className="text-xs text-slate-500">A carregar sessão…</p>
+          <p className="text-xs text-slate-500">Carregando sessão…</p>
         ) : cloudConfigured ? (
           <>
             {user ? (
@@ -73,18 +73,18 @@ export function MorePage({ notify }: { notify: (msg: string) => void }) {
                   Sessão: <span className="font-semibold">{user.email ?? user.id.slice(0, 8)}…</span>
                 </p>
                 <div className="mb-3 rounded-2xl border border-slate-200 bg-slate-50/90 px-3 py-3 text-xs text-slate-800">
-                  <p className="font-semibold text-slate-900">Onde está guardado</p>
+                  <p className="font-semibold text-slate-900">Onde está salvo</p>
                   <ul className="mt-2 list-none space-y-1.5">
                     <li>
-                      <span className="text-slate-600">Neste aparelho (navegador): </span>
-                      <time dateTime={lastLocalSavedAt ?? undefined}>{formatPtIso(lastLocalSavedAt)}</time>
+                      <span className="text-slate-600">Neste dispositivo (navegador): </span>
+                      <time dateTime={lastLocalSavedAt ?? undefined}>{formatDateTimeBr(lastLocalSavedAt)}</time>
                     </li>
                     <li>
-                      <span className="text-slate-600">Última cópia enviada à sua conta: </span>
+                      <span className="text-slate-600">Última cópia enviada para sua conta: </span>
                       {!pullDone ? (
-                        <span className="text-slate-500">A sincronizar…</span>
+                        <span className="text-slate-500">Sincronizando…</span>
                       ) : (
-                        <time dateTime={lastCloudPushAt ?? undefined}>{formatPtIso(lastCloudPushAt)}</time>
+                        <time dateTime={lastCloudPushAt ?? undefined}>{formatDateTimeBr(lastCloudPushAt)}</time>
                       )}
                     </li>
                   </ul>
@@ -99,22 +99,22 @@ export function MorePage({ notify }: { notify: (msg: string) => void }) {
                     className="mt-3 w-full rounded-2xl border border-teal-600 bg-white px-3 py-2.5 text-sm font-semibold text-teal-900 shadow-sm hover:bg-teal-50 disabled:cursor-not-allowed disabled:opacity-50"
                     onClick={async () => {
                       const ok = await pushToCloudNow()
-                      if (ok) notify('Cópia guardada na sua conta.')
+                      if (ok) notify('Cópia salva na sua conta.')
                     }}
                   >
-                    {isPushing ? 'A guardar na nuvem…' : 'Guardar na nuvem agora'}
+                    {isPushing ? 'Salvando na nuvem…' : 'Salvar na nuvem agora'}
                   </button>
                 </div>
                 <p className="mb-3 text-xs leading-relaxed text-slate-600">
-                  Para além do botão acima, a coleção sincroniza sozinha poucos segundos depois de cada alteração. Noutro
-                  telemóvel ou PC, abra o mesmo site e entre com a mesma conta Google — não precisa copiar links.
+                  Além do botão acima, a coleção sincroniza sozinha alguns segundos depois de cada alteração. Em outro
+                  celular ou PC, abra o mesmo site e entre com a mesma conta Google — não precisa copiar links.
                 </p>
                 <button
                   type="button"
                   className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-800 hover:bg-slate-50"
                   onClick={async () => {
                     await signOut()
-                    notify('Sessão terminada neste aparelho.')
+                    notify('Sessão encerrada neste dispositivo.')
                   }}
                 >
                   Sair da conta
@@ -123,19 +123,19 @@ export function MorePage({ notify }: { notify: (msg: string) => void }) {
             ) : (
               <>
                 <div className="mb-3 rounded-2xl border border-slate-200 bg-slate-50/90 px-3 py-3 text-xs text-slate-800">
-                  <p className="font-semibold text-slate-900">Neste aparelho</p>
+                  <p className="font-semibold text-slate-900">Neste dispositivo</p>
                   <p className="mt-1 text-slate-700">
-                    Última gravação local:{' '}
-                    <time dateTime={lastLocalSavedAt ?? undefined}>{formatPtIso(lastLocalSavedAt)}</time>
+                    Último salvamento local:{' '}
+                    <time dateTime={lastLocalSavedAt ?? undefined}>{formatDateTimeBr(lastLocalSavedAt)}</time>
                   </p>
                   <p className="mt-2 text-[11px] leading-relaxed text-slate-600">
-                    As marcações ficam no armazenamento deste navegador. Entre com Google para também guardar na sua conta
+                    As marcações ficam no armazenamento deste navegador. Entre com Google para salvar também na sua conta
                     na nuvem.
                   </p>
                 </div>
                 <p className="mb-3 text-xs leading-relaxed text-slate-600">
-                  Entre com Google para guardar o álbum na nuvem Supabase. Em qualquer dispositivo, use o mesmo login —
-                  os dados sobem e descem sozinhos (última alteração ganha quando há conflito).
+                  Entre com Google para salvar o álbum na nuvem Supabase. Em qualquer dispositivo, use o mesmo login — os
+                  dados sobem e descem sozinhos (a última alteração vence quando há conflito).
                 </p>
                 <button
                   type="button"
@@ -153,10 +153,10 @@ export function MorePage({ notify }: { notify: (msg: string) => void }) {
         ) : (
           <>
             <div className="mb-3 rounded-2xl border border-amber-200 bg-amber-50/80 px-3 py-3 text-xs text-amber-950">
-              <p className="font-semibold">Neste aparelho</p>
+              <p className="font-semibold">Neste dispositivo</p>
               <p className="mt-1">
-                Última gravação local:{' '}
-                <time dateTime={lastLocalSavedAt ?? undefined}>{formatPtIso(lastLocalSavedAt)}</time>
+                Último salvamento local:{' '}
+                <time dateTime={lastLocalSavedAt ?? undefined}>{formatDateTimeBr(lastLocalSavedAt)}</time>
               </p>
             </div>
             <p className="mb-3 text-xs leading-relaxed text-amber-900">
@@ -181,7 +181,7 @@ export function MorePage({ notify }: { notify: (msg: string) => void }) {
             onClick={async () => {
               try {
                 await clipboard(buildShareUrl())
-                notify('Link copiado. Abra noutro aparelho e aceite importar.')
+                notify('Link copiado. Abra em outro dispositivo e aceite importar.')
               } catch {
                 notify('Copiar falhou.')
               }
@@ -195,7 +195,7 @@ export function MorePage({ notify }: { notify: (msg: string) => void }) {
       <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
         <h2 className="text-base font-black text-slate-900">Backup offline</h2>
         <p className="mb-3 text-xs text-slate-600">
-          O progresso fica no armazenamento local deste navegador até importar de outro sítio. Exporte com frequência — o
+          O progresso fica no armazenamento local deste navegador até importar de outro lugar. Exporte com frequência — o
           arquivo contém <code className="text-slate-800">&quot;version&quot;: 3</code> alinhado à ordem física
           (Panini&nbsp;00, FWC inicial, seleções, FWC final).
         </p>
@@ -250,7 +250,7 @@ export function MorePage({ notify }: { notify: (msg: string) => void }) {
       <section className="rounded-3xl border border-rose-200 bg-rose-50 p-4 text-rose-900 shadow-inner">
         <h2 className="text-base font-black">Limpar coleção local</h2>
         <p className="mb-3 text-xs">
-          Remove todas as marcações apenas neste aparelho. Faça backup antes de continuar.
+          Remove todas as marcações apenas neste dispositivo. Faça backup antes de continuar.
         </p>
         <button
           type="button"

@@ -2,7 +2,7 @@ import { collectionStats } from '@/utils/stats'
 import { useCollection } from '@/context/CollectionContext'
 import { DEV_SOURCE_MARK } from '@/workspaceMark'
 
-const pctFormat = new Intl.NumberFormat('pt-PT', {
+const pctFormat = new Intl.NumberFormat('pt-BR', {
   minimumFractionDigits: 0,
   maximumFractionDigits: 1,
 })

@@ -33,7 +33,7 @@ type CloudSyncCtx = {
 const CloudSyncContext = createContext<CloudSyncCtx | null>(null)
 
 /**
- * Sincroniza a coleção com o Supabase quando há sessão Google, com push debounced
+ * Sincroniza a coleção com o Supabase com login Google, com push em debounce
  * e opção de envio imediato (`pushToCloudNow`).
  */
 export function CloudSyncProvider({ children }: { children: ReactNode }) {
@@ -66,7 +66,7 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
   const pushToCloudNow = useCallback(async (): Promise<boolean> => {
     const supabase = getSupabase()
     if (!supabase || !uid) {
-      setLastCloudError('Inicie sessão e confirme que o Supabase está configurado.')
+      setLastCloudError('Faça login e confirme se o Supabase está configurado.')
       return false
     }
     setIsPushing(true)
@@ -76,7 +76,7 @@ export function CloudSyncProvider({ children }: { children: ReactNode }) {
       setLastCloudPushAt(new Date().toISOString())
       return true
     } catch (e) {
-      setLastCloudError(e instanceof Error ? e.message : 'Não foi possível guardar na nuvem.')
+      setLastCloudError(e instanceof Error ? e.message : 'Não foi possível salvar na nuvem.')
       return false
     } finally {
       setIsPushing(false)
