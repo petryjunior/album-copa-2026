@@ -2,13 +2,8 @@ import { useMemo } from 'react'
 import type { CatalogEntry } from '@/types/catalog'
 import { ManualCloudSaveButton } from '@/components/ManualCloudSaveButton'
 import { useCollection } from '@/context/CollectionContext'
+import { stickerShareLabel } from '@/utils/shareTexts'
 import { collectionStats } from '@/utils/stats'
-
-function entryShortLabel(e: CatalogEntry): string {
-  if (e.segment === 'panini') return 'Panini 00'
-  if (e.segment === 'fwc') return `FWC ${e.fwcNumber ?? ''}`
-  return `${e.teamCode} · ${e.displayPrinted}`
-}
 
 type Props = {
   onOpenSticker?: (entry: CatalogEntry) => void
@@ -74,7 +69,7 @@ export function DuplicatesBottomSection({ onOpenSticker, notify }: Props) {
                 onClick={() => onOpenSticker?.(entry)}
                 className="flex w-full min-h-[3rem] touch-manipulation items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-left text-sm shadow-sm transition [-webkit-touch-callout:none] hover:bg-slate-50 active:scale-[0.99]"
               >
-                <span className="font-semibold text-slate-900">{entryShortLabel(entry)}</span>
+                <span className="font-semibold text-slate-900">{stickerShareLabel(entry)}</span>
                 <span className="shrink-0 rounded-full bg-rose-600 px-2 py-0.5 text-[11px] font-bold text-white">
                   {extra > 99 ? '99+' : extra}
                 </span>
