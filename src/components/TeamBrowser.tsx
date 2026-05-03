@@ -5,6 +5,7 @@ import { StickerGrid } from '@/components/StickerGrid'
 import { useCollection } from '@/context/CollectionContext'
 import { TeamFlag } from '@/components/TeamFlag'
 import { getTeamTheme } from '@/lib/teamThemes'
+import { ManualCloudSaveButton } from '@/components/ManualCloudSaveButton'
 
 function TeamNameWithFlag({ code, name }: { code: string; name: string }) {
   return (
@@ -33,7 +34,13 @@ function teamMatchesFilter(t: TeamRow, qRaw: string): boolean {
 
 type SortMode = 'group' | 'alpha'
 
-export function TeamBrowser({ onPick }: { onPick: (entry: CatalogEntry) => void }) {
+export function TeamBrowser({
+  onPick,
+  notify,
+}: {
+  onPick: (entry: CatalogEntry) => void
+  notify: (msg: string) => void
+}) {
   const { catalog, state, setQty } = useCollection()
   const teams = useMemo(() => getTeamsUnique(), [])
   const [code, setCode] = useState<string | null>(null)
@@ -215,6 +222,7 @@ export function TeamBrowser({ onPick }: { onPick: (entry: CatalogEntry) => void 
             </p>
           </div>
         </div>
+        <ManualCloudSaveButton notify={notify} className="min-h-11 shrink-0 bg-white/95" />
       </div>
       {(prevTeam || nextTeam) && (
         <div className="flex flex-wrap items-stretch justify-between gap-2">

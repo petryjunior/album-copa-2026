@@ -18,7 +18,7 @@ function formatDateTimeBr(iso: string | null): string {
 export function MorePage({ notify }: { notify: (msg: string) => void }) {
   const { exportJson, importJson, clearAll, catalog, state, buildShareUrl, lastLocalSavedAt } = useCollection()
   const { user, loading: authLoading, cloudConfigured, signInWithGoogle, signOut } = useAuth()
-  const { lastCloudPushAt, lastCloudError, isPushing, pullDone, pushToCloudNow } = useCloudSync()
+  const { lastCloudPushAt, lastCloudError, pullDone } = useCloudSync()
   const [importArea, setImportArea] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -93,21 +93,12 @@ export function MorePage({ notify }: { notify: (msg: string) => void }) {
                       {lastCloudError}
                     </p>
                   ) : null}
-                  <button
-                    type="button"
-                    disabled={isPushing || !pullDone}
-                    className="mt-3 w-full rounded-2xl border border-teal-600 bg-white px-3 py-2.5 text-sm font-semibold text-teal-900 shadow-sm hover:bg-teal-50 disabled:cursor-not-allowed disabled:opacity-50"
-                    onClick={async () => {
-                      const ok = await pushToCloudNow()
-                      if (ok) notify('Cópia salva na sua conta.')
-                    }}
-                  >
-                    {isPushing ? 'Salvando na nuvem…' : 'Salvar na nuvem agora'}
-                  </button>
                 </div>
                 <p className="mb-3 text-xs leading-relaxed text-slate-600">
-                  Além do botão acima, a coleção sincroniza sozinha alguns segundos depois de cada alteração. Em outro
-                  celular ou PC, abra o mesmo site e entre com a mesma conta Google — não precisa copiar links.
+                  Toque em <span className="font-semibold">Salvar</span> nas vistas onde edita figurinhas (grelha, seleção,
+                  repetidas, editor) para enviar a coleção à nuvem — não há envio automático. Em outro celular ou PC, abra
+                  o mesmo site e entre com a mesma conta Google; este aparelho também recebe dados mais novos da nuvem ao
+                  focar o separador ou em segundo plano (consulta periódica).
                 </p>
                 <button
                   type="button"
@@ -134,8 +125,9 @@ export function MorePage({ notify }: { notify: (msg: string) => void }) {
                   </p>
                 </div>
                 <p className="mb-3 text-xs leading-relaxed text-slate-600">
-                  Entre com Google para salvar o álbum na nuvem Supabase. Em qualquer dispositivo, use o mesmo login — os
-                  dados sobem e descem sozinhos (a última alteração vence quando há conflito).
+                  Entre com Google para poder usar <span className="font-semibold">Salvar</span> e guardar a coleção na
+                  nuvem Supabase. O envio é manual; as alterações de outros dispositivos entram quando voltar à página ou
+                  por sincronização em segundo plano.
                 </p>
                 <button
                   type="button"

@@ -11,6 +11,7 @@ import { SummaryHeader } from '@/components/SummaryHeader'
 import { TeamBrowser } from '@/components/TeamBrowser'
 import { MorePage } from '@/components/MorePage'
 import { DuplicatesBottomSection } from '@/components/DuplicatesBottomSection'
+import { ManualCloudSaveButton } from '@/components/ManualCloudSaveButton'
 function searchableBlob(entry: CatalogEntry): string {
   const parts = [
     String(entry.id),
@@ -94,6 +95,9 @@ function AppShell() {
 
         {(tab === 'todas' || tab === 'faltando' || tab === 'extras') && (
           <>
+            <div className="mb-3 flex justify-end">
+              <ManualCloudSaveButton notify={notify} />
+            </div>
             <StickerGrid
               entries={filtered}
               qtyOf={(id) => state[id] ?? 0}
@@ -112,14 +116,14 @@ function AppShell() {
           </>
         )}
 
-        {tab === 'repetidas' && <DuplicatesBottomSection onOpenSticker={setActiveEntry} />}
+        {tab === 'repetidas' && <DuplicatesBottomSection onOpenSticker={setActiveEntry} notify={notify} />}
 
-        {tab === 'times' && <TeamBrowser onPick={setActiveEntry} />}
+        {tab === 'times' && <TeamBrowser onPick={setActiveEntry} notify={notify} />}
         {tab === 'mais' && <MorePage notify={notify} />}
       </main>
 
       {activeEntry ? (
-        <StickerEditorSheet entry={activeEntry} onClose={() => setActiveEntry(null)} />
+        <StickerEditorSheet entry={activeEntry} notify={notify} onClose={() => setActiveEntry(null)} />
       ) : null}
 
       <BottomTabs tab={tab} setTab={setTab} />

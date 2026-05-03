@@ -1,13 +1,15 @@
 import { BottomSheet } from '@/components/BottomSheet'
+import { ManualCloudSaveButton } from '@/components/ManualCloudSaveButton'
 import { useCollection } from '@/context/CollectionContext'
 import type { CatalogEntry } from '@/types/catalog'
 
 type Props = {
   entry: CatalogEntry
+  notify: (msg: string) => void
   onClose: () => void
 }
 
-export function StickerEditorSheet({ entry, onClose }: Props) {
+export function StickerEditorSheet({ entry, notify, onClose }: Props) {
   const { state, setQty, inc } = useCollection()
   const qty = state[entry.id] ?? 0
 
@@ -84,6 +86,9 @@ export function StickerEditorSheet({ entry, onClose }: Props) {
         Informe quantas figurinhas iguais você tem no total no bolso/arquivo. Todas que passam da primeira
         viram repetidas: o marcador rosado no canto mostra quantas cópias a mais você tem da mesma figurinha.
       </p>
+      <div className="mt-6 flex justify-center">
+        <ManualCloudSaveButton notify={notify} className="min-h-11 w-full max-w-xs sm:w-auto" />
+      </div>
     </BottomSheet>
   )
 }

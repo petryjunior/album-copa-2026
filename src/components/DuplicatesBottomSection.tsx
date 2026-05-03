@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import type { CatalogEntry } from '@/types/catalog'
+import { ManualCloudSaveButton } from '@/components/ManualCloudSaveButton'
 import { useCollection } from '@/context/CollectionContext'
 import { collectionStats } from '@/utils/stats'
 
@@ -11,9 +12,10 @@ function entryShortLabel(e: CatalogEntry): string {
 
 type Props = {
   onOpenSticker?: (entry: CatalogEntry) => void
+  notify: (msg: string) => void
 }
 
-export function DuplicatesBottomSection({ onOpenSticker }: Props) {
+export function DuplicatesBottomSection({ onOpenSticker, notify }: Props) {
   const { catalog, state } = useCollection()
   const s = collectionStats(catalog, state)
 
@@ -44,10 +46,18 @@ export function DuplicatesBottomSection({ onOpenSticker }: Props) {
           <p className="mt-1 text-xs leading-relaxed text-slate-500">
             Cópias além da primeira no álbum. Toque em uma figurinha para abrir o editor de quantidade.
           </p>
+          <div className="mt-3 sm:hidden">
+            <ManualCloudSaveButton notify={notify} className="w-full min-h-11" />
+          </div>
         </div>
-        <div className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-center text-xs font-medium text-slate-700 shadow-sm sm:justify-self-end">
+        <div className="flex flex-col items-stretch gap-2 sm:items-end">
+          <div className="hidden sm:block">
+            <ManualCloudSaveButton notify={notify} />
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-center text-xs font-medium text-slate-700 shadow-sm sm:justify-self-end">
           <div className="text-base font-bold text-rose-700">{s.duplicateTotal}</div>
           <div className="text-[11px] text-slate-600">Repetidas</div>
+          </div>
         </div>
       </div>
 

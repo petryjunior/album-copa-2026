@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { ManualCloudSaveButton } from '@/components/ManualCloudSaveButton'
 import { resolveAlbumStickerList } from '@/utils/parseAlbumCodes'
 import { useCollection } from '@/context/CollectionContext'
 
@@ -27,9 +28,12 @@ export function PasteToolbar({ onToast }: { onToast: (msg: string) => void }) {
 
   return (
     <div className="mb-5 rounded-3xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-      <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-        Registrar várias figurinhas
-      </label>
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+          Registrar várias figurinhas
+        </label>
+        <ManualCloudSaveButton notify={onToast} className="shrink-0" />
+      </div>
       <textarea
         value={raw}
         placeholder="Ex.: 00, FWC 3, FWC 1–5, BRA 12, Brasil 13–14"
