@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useAuth } from '@/context/AuthContext'
+import { useCloudSync } from '@/context/CloudSyncContext'
 import { useCollection } from '@/context/CollectionContext'
 import { buildShareDuplicatesText, buildShareMissingText } from '@/utils/shareTexts'
 
@@ -7,9 +8,17 @@ async function clipboard(text: string) {
   await navigator.clipboard.writeText(text)
 }
 
+function formatPtIso(iso: string | null): string {
+  if (!iso) return '—'
+  const t = Date.parse(iso)
+  if (Number.isNaN(t)) return '—'
+  return new Date(t).toLocaleString('pt-PT', { dateStyle: 'short', timeStyle: 'short' })
+}
+
 export function MorePage({ notify }: { notify: (msg: string) => void }) {
-  const { exportJson, importJson, clearAll, catalog, state, buildShareUrl } = useCollection()
+  const { exportJson, importJson, clearAll, catalog, state, buildShareUrl, lastLocalSavedAt } = useCollection()
   const { user, loading: authLoading, cloudConfigured, signInWithGoogle, signOut } = useAuth()
+  const { lastCloudPushAt, lastCloudError, isPushing, pullDone, pushToCloudNow } = useCloudSync()
   const [importArea, setImportArea] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -63,8 +72,41 @@ export function MorePage({ notify }: { notify: (msg: string) => void }) {
                 <p className="mb-1 text-xs text-slate-700">
                   Sessão: <span className="font-semibold">{user.email ?? user.id.slice(0, 8)}…</span>
                 </p>
+                <div className="mb-3 rounded-2xl border border-slate-200 bg-slate-50/90 px-3 py-3 text-xs text-slate-800">
+                  <p className="font-semibold text-slate-900">Onde está guardado</p>
+                  <ul className="mt-2 list-none space-y-1.5">
+                    <li>
+                      <span className="text-slate-600">Neste aparelho (navegador): </span>
+                      <time dateTime={lastLocalSavedAt ?? undefined}>{formatPtIso(lastLocalSavedAt)}</time>
+                    </li>
+                    <li>
+                      <span className="text-slate-600">Última cópia enviada à sua conta: </span>
+                      {!pullDone ? (
+                        <span className="text-slate-500">A sincronizar…</span>
+                      ) : (
+                        <time dateTime={lastCloudPushAt ?? undefined}>{formatPtIso(lastCloudPushAt)}</time>
+                      )}
+                    </li>
+                  </ul>
+                  {lastCloudError ? (
+                    <p className="mt-2 text-[11px] font-medium text-rose-700" role="alert">
+                      {lastCloudError}
+                    </p>
+                  ) : null}
+                  <button
+                    type="button"
+                    disabled={isPushing || !pullDone}
+                    className="mt-3 w-full rounded-2xl border border-teal-600 bg-white px-3 py-2.5 text-sm font-semibold text-teal-900 shadow-sm hover:bg-teal-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    onClick={async () => {
+                      const ok = await pushToCloudNow()
+                      if (ok) notify('Cópia guardada na sua conta.')
+                    }}
+                  >
+                    {isPushing ? 'A guardar na nuvem…' : 'Guardar na nuvem agora'}
+                  </button>
+                </div>
                 <p className="mb-3 text-xs leading-relaxed text-slate-600">
-                  A coleção sincroniza automaticamente com a nuvem (alguns segundos depois de cada alteração). Noutro
+                  Para além do botão acima, a coleção sincroniza sozinha poucos segundos depois de cada alteração. Noutro
                   telemóvel ou PC, abra o mesmo site e entre com a mesma conta Google — não precisa copiar links.
                 </p>
                 <button
@@ -80,6 +122,17 @@ export function MorePage({ notify }: { notify: (msg: string) => void }) {
               </>
             ) : (
               <>
+                <div className="mb-3 rounded-2xl border border-slate-200 bg-slate-50/90 px-3 py-3 text-xs text-slate-800">
+                  <p className="font-semibold text-slate-900">Neste aparelho</p>
+                  <p className="mt-1 text-slate-700">
+                    Última gravação local:{' '}
+                    <time dateTime={lastLocalSavedAt ?? undefined}>{formatPtIso(lastLocalSavedAt)}</time>
+                  </p>
+                  <p className="mt-2 text-[11px] leading-relaxed text-slate-600">
+                    As marcações ficam no armazenamento deste navegador. Entre com Google para também guardar na sua conta
+                    na nuvem.
+                  </p>
+                </div>
                 <p className="mb-3 text-xs leading-relaxed text-slate-600">
                   Entre com Google para guardar o álbum na nuvem Supabase. Em qualquer dispositivo, use o mesmo login —
                   os dados sobem e descem sozinhos (última alteração ganha quando há conflito).
@@ -98,10 +151,19 @@ export function MorePage({ notify }: { notify: (msg: string) => void }) {
             )}
           </>
         ) : (
-          <p className="mb-3 text-xs leading-relaxed text-amber-900">
-            Sincronização na nuvem não está configurada neste build (faltam{' '}
-            <code className="rounded bg-amber-100 px-1">VITE_SUPABASE_*</code>). Use o backup JSON ou o link abaixo.
-          </p>
+          <>
+            <div className="mb-3 rounded-2xl border border-amber-200 bg-amber-50/80 px-3 py-3 text-xs text-amber-950">
+              <p className="font-semibold">Neste aparelho</p>
+              <p className="mt-1">
+                Última gravação local:{' '}
+                <time dateTime={lastLocalSavedAt ?? undefined}>{formatPtIso(lastLocalSavedAt)}</time>
+              </p>
+            </div>
+            <p className="mb-3 text-xs leading-relaxed text-amber-900">
+              Sincronização na nuvem não está configurada neste build (faltam{' '}
+              <code className="rounded bg-amber-100 px-1">VITE_SUPABASE_*</code>). Use o backup JSON ou o link abaixo.
+            </p>
+          </>
         )}
 
         <details className="group mt-2 rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 px-3 py-2">

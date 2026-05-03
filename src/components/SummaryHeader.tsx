@@ -2,7 +2,12 @@ import { collectionStats } from '@/utils/stats'
 import { useCollection } from '@/context/CollectionContext'
 import { DEV_SOURCE_MARK } from '@/workspaceMark'
 
-export function SummaryHeader({ query }: { query: string }) {
+const pctFormat = new Intl.NumberFormat('pt-PT', {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 1,
+})
+
+export function SummaryHeader() {
   const { catalog, state } = useCollection()
   const s = collectionStats(catalog, state)
 
@@ -18,10 +23,6 @@ export function SummaryHeader({ query }: { query: string }) {
               </span>
             ) : null}
           </div>
-          <p className="text-xs text-slate-600">
-            Panini FIFA WC 2026 · 980 posições (00 · FWC · seleções)
-            {query.trim() ? ' · filtro ligado' : ''}
-          </p>
           {import.meta.env.DEV ? (
             <p className="mt-1 select-all rounded bg-orange-50 px-1 py-0.5 font-mono text-[10px] leading-tight text-orange-900 ring-1 ring-orange-300/60">
               {DEV_SOURCE_MARK} — se não vê isto, o dev server não é esta pasta
@@ -29,7 +30,7 @@ export function SummaryHeader({ query }: { query: string }) {
           ) : null}
         </div>
         <div className="rounded-2xl border border-teal-200 bg-teal-50 px-3 py-1.5 text-right">
-          <div className="text-lg font-black leading-none text-teal-900">{s.pct}%</div>
+          <div className="text-lg font-black leading-none text-teal-900">{pctFormat.format(s.pct)}%</div>
           <div className="text-[11px] font-medium leading-tight text-teal-800">Completo</div>
         </div>
       </div>

@@ -5,7 +5,7 @@ import type { CatalogEntry } from '@/types/catalog'
 type Props = {
   entries: CatalogEntry[]
   qtyOf: (id: number) => number
-  /** Toque / clique esquerdo: marca que tem 1 cópia */
+  /** Toque / clique esquerdo: alterna entre sem cópia e ter pelo menos 1 */
   onMarkHaveOne: (e: CatalogEntry) => void
   /** Clique direito ou manter (touch): editor de quantidade */
   onOpenEditor: (e: CatalogEntry) => void

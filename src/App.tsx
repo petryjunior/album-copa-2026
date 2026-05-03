@@ -2,7 +2,7 @@ import { useDeferredValue, useMemo, useState } from 'react'
 import type { CatalogEntry } from '@/types/catalog'
 import { AuthProvider } from '@/context/AuthContext'
 import { CollectionProvider, useCollection } from '@/context/CollectionContext'
-import { CloudSyncBridge } from '@/components/CloudSyncBridge'
+import { CloudSyncProvider } from '@/context/CloudSyncContext'
 import { BottomTabs, type TabId } from '@/components/BottomTabs'
 import { PasteToolbar } from '@/components/PasteToolbar'
 import { StickerEditorSheet } from '@/components/StickerEditorSheet'
@@ -10,6 +10,7 @@ import { StickerGrid } from '@/components/StickerGrid'
 import { SummaryHeader } from '@/components/SummaryHeader'
 import { TeamBrowser } from '@/components/TeamBrowser'
 import { MorePage } from '@/components/MorePage'
+import { DuplicatesBottomSection } from '@/components/DuplicatesBottomSection'
 function searchableBlob(entry: CatalogEntry): string {
   const parts = [
     String(entry.id),
@@ -47,7 +48,7 @@ function AppShell() {
   const extras = useMemo(() => catalog.filter((e) => e.segment !== 'team'), [catalog])
 
   const filtered = useMemo(() => {
-    if (tab === 'times' || tab === 'mais') return []
+    if (tab === 'times' || tab === 'mais' || tab === 'repetidas') return []
     let list: CatalogEntry[] = catalog
     if (tab === 'faltando') {
       list = list.filter((e) => (state[e.id] ?? 0) < 1)
@@ -66,7 +67,7 @@ function AppShell() {
         </div>
       )}
 
-      <SummaryHeader query={query} />
+      <SummaryHeader />
 
       <main className="flex-1 px-4 pt-4">
         {(tab === 'todas' || tab === 'faltando' || tab === 'extras') && (
@@ -92,19 +93,26 @@ function AppShell() {
         )}
 
         {(tab === 'todas' || tab === 'faltando' || tab === 'extras') && (
-          <StickerGrid
-            entries={filtered}
-            qtyOf={(id) => state[id] ?? 0}
-            onMarkHaveOne={(e) => setQty(e.id, 1)}
-            onOpenEditor={(e) => setActiveEntry(e)}
-          />
+          <>
+            <StickerGrid
+              entries={filtered}
+              qtyOf={(id) => state[id] ?? 0}
+              onMarkHaveOne={(e) => {
+                const q = state[e.id] ?? 0
+                setQty(e.id, q >= 1 ? 0 : 1)
+              }}
+              onOpenEditor={(e) => setActiveEntry(e)}
+            />
+
+            {(tab === 'todas' || tab === 'faltando') && (
+              <div className="mt-8">
+                <PasteToolbar onToast={notify} />
+              </div>
+            )}
+          </>
         )}
 
-        {(tab === 'todas' || tab === 'faltando') && (
-          <div className="mt-8">
-            <PasteToolbar onToast={notify} />
-          </div>
-        )}
+        {tab === 'repetidas' && <DuplicatesBottomSection onOpenSticker={setActiveEntry} />}
 
         {tab === 'times' && <TeamBrowser onPick={setActiveEntry} />}
         {tab === 'mais' && <MorePage notify={notify} />}
@@ -126,8 +134,9 @@ export default function App() {
   return (
     <AuthProvider>
       <CollectionProvider>
-        <CloudSyncBridge />
-        <AppShell />
+        <CloudSyncProvider>
+          <AppShell />
+        </CloudSyncProvider>
       </CollectionProvider>
     </AuthProvider>
   )

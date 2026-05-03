@@ -195,7 +195,7 @@ export function TeamBrowser({ onPick }: { onPick: (entry: CatalogEntry) => void 
           className="rounded-2xl border-2 bg-white/95 px-3 py-2 text-sm font-semibold shadow-sm transition hover:bg-white"
           style={{ borderColor: theme.accent, color: theme.primaryDark }}
         >
-          Voltar às seleções
+          Voltar
         </button>
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <TeamFlag
@@ -216,7 +216,10 @@ export function TeamBrowser({ onPick }: { onPick: (entry: CatalogEntry) => void 
       <StickerGrid
         entries={entries}
         qtyOf={(id) => state[id] ?? 0}
-        onMarkHaveOne={(e) => setQty(e.id, 1)}
+        onMarkHaveOne={(e) => {
+          const q = state[e.id] ?? 0
+          setQty(e.id, q >= 1 ? 0 : 1)
+        }}
         onOpenEditor={onPick}
         visualTheme={theme}
       />

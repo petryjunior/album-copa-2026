@@ -6,6 +6,7 @@ import {
   useMemo,
   useReducer,
   useRef,
+  useState,
   type ReactNode,
 } from 'react'
 import type { PersistedShape } from '@/types/catalog'
@@ -87,6 +88,8 @@ function loadFromStorage(): State {
 type Ctx = {
   catalog: typeof CATALOG
   state: State
+  /** ISO timestamp da última gravação no armazenamento local deste navegador */
+  lastLocalSavedAt: string | null
   setQty: (id: number, qty: number) => void
   inc: (id: number, delta: number) => void
   bulkEnsureMin: (ids: number[], min: number) => void
@@ -105,6 +108,13 @@ const CollectionContext = createContext<Ctx | null>(null)
 
 export function CollectionProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, {}, () => loadFromStorage())
+  const [lastLocalSavedAt, setLastLocalSavedAt] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem(LOCAL_SAVED_AT_KEY)
+    } catch {
+      return null
+    }
+  })
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pendingSavedAtRef = useRef<string | null>(null)
 
@@ -117,6 +127,7 @@ export function CollectionProvider({ children }: { children: ReactNode }) {
     const at = pendingSavedAtRef.current ?? new Date().toISOString()
     pendingSavedAtRef.current = null
     localStorage.setItem(LOCAL_SAVED_AT_KEY, at)
+    setLastLocalSavedAt(at)
   }
 
   useEffect(() => {
@@ -240,6 +251,7 @@ export function CollectionProvider({ children }: { children: ReactNode }) {
     () => ({
       catalog: CATALOG,
       state,
+      lastLocalSavedAt,
       setQty,
       inc,
       bulkEnsureMin,
@@ -253,6 +265,7 @@ export function CollectionProvider({ children }: { children: ReactNode }) {
     }),
     [
       state,
+      lastLocalSavedAt,
       setQty,
       inc,
       bulkEnsureMin,

@@ -56,7 +56,7 @@ const LONG_PRESS_MS = 550
 type Props = {
   entry: CatalogEntry
   qty: number
-  /** Toque / clique esquerdo: tem pelo menos 1 cópia */
+  /** Toque / clique esquerdo: alternar marcar 1 vs limpar (0) */
   onMarkHaveOne: () => void
   /** Clique direito (desktop) ou manter (telemóvel): escolher quantidade */
   onOpenEditor: () => void
@@ -166,6 +166,9 @@ export function StickerChip({ entry, qty, onMarkHaveOne, onOpenEditor, visualThe
   const ariaHint = has
     ? ', registada como tendo pelo menos uma'
     : ', falta'
+  const tapHint = has
+    ? 'Toque ou clique para limpar (quantidade 0).'
+    : 'Toque ou clique para marcar que tem uma cópia.'
 
   return (
     <button
@@ -176,10 +179,10 @@ export function StickerChip({ entry, qty, onMarkHaveOne, onOpenEditor, visualThe
       onTouchEnd={handleTouchEndOrCancel}
       onTouchCancel={handleTouchEndOrCancel}
       onTouchMove={handleTouchMove}
-      title="Toque: tenho 1 · Manter / clique direito: quantidade"
+      title="Toque: marcar 1 ou limpar · Manter / clique direito: quantidade"
       className={chipCls}
       style={chipStyle}
-      aria-label={`Figurinha ${label}${ariaHint}. Toque ou clique para marcar que tem uma cópia. Clique direito ou mantenha pressionado para definir a quantidade.`}
+      aria-label={`Figurinha ${label}${ariaHint}. ${tapHint} Clique direito ou mantenha pressionado para definir a quantidade.`}
     >
       <PrimaryLabel entry={entry} has={has} theme={visualTheme} />
       {dup > 0 && (
