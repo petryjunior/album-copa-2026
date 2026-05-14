@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import type { CatalogEntry } from '@/types/catalog'
 import { ManualCloudSaveButton } from '@/components/ManualCloudSaveButton'
+import { TeamFlag } from '@/components/TeamFlag'
 import { useCollection } from '@/context/CollectionContext'
 import { stickerShareLabel } from '@/utils/shareTexts'
 
@@ -9,13 +10,33 @@ type Props = {
   notify: (msg: string) => void
 }
 
+/** Ordem brochura: 00 → FWC 1–8 → grupos A–L (ordem física do catálogo) → FWC 9–19. */
+function limboSortOrder(e: CatalogEntry): { tier: number; a: number; b: number } {
+  if (e.segment === 'panini') return { tier: 0, a: 0, b: 0 }
+  if (e.segment === 'fwc' && e.fwcNumber != null) {
+    if (e.fwcNumber <= 8) return { tier: 1, a: e.fwcNumber, b: 0 }
+    return { tier: 3, a: e.fwcNumber, b: 0 }
+  }
+  if (e.segment === 'team' && e.group) {
+    const g = e.group.toUpperCase().charCodeAt(0) - 65
+    return { tier: 2, a: g, b: e.id }
+  }
+  return { tier: 9, a: e.id, b: 0 }
+}
+
+function cmpLimboAlbum(a: CatalogEntry, b: CatalogEntry): number {
+  const oa = limboSortOrder(a)
+  const ob = limboSortOrder(b)
+  if (oa.tier !== ob.tier) return oa.tier - ob.tier
+  if (oa.a !== ob.a) return oa.a - ob.a
+  return oa.b - ob.b
+}
+
 export function LimboSection({ onOpenSticker, notify }: Props) {
   const { catalog, limboState } = useCollection()
 
   const rows = useMemo(() => {
-    return catalog
-      .filter((e) => (limboState[e.id] ?? 0) > 0)
-      .sort((a, b) => a.id - b.id)
+    return catalog.filter((e) => (limboState[e.id] ?? 0) > 0).sort(cmpLimboAlbum)
   }, [catalog, limboState])
 
   const totalPieces = useMemo(
@@ -59,7 +80,16 @@ export function LimboSection({ onOpenSticker, notify }: Props) {
                     onClick={() => onOpenSticker(e)}
                     className="flex w-full min-h-[3rem] touch-manipulation items-center justify-between gap-3 rounded-2xl border border-violet-200 bg-white px-3 py-2.5 text-left text-sm shadow-sm transition hover:bg-violet-50 active:scale-[0.99]"
                   >
-                    <span className="font-semibold text-slate-900">{stickerShareLabel(e)}</span>
+                    <span className="flex min-w-0 flex-1 items-center gap-2.5">
+                      {e.segment === 'team' && e.teamCode ? (
+                        <TeamFlag
+                          code={e.teamCode}
+                          title={e.teamName ?? e.teamCode}
+                          className="!h-6 !w-8 shrink-0 rounded-sm shadow-sm ring-1 ring-slate-200/80"
+                        />
+                      ) : null}
+                      <span className="truncate font-semibold text-slate-900">{stickerShareLabel(e)}</span>
+                    </span>
                     <span className="shrink-0 rounded-full bg-violet-600 px-2.5 py-0.5 text-xs font-bold text-white tabular-nums">
                       {n > 999 ? '999+' : n} no limbo
                     </span>

@@ -4,7 +4,6 @@ import { useAuth } from '@/context/AuthContext'
 import { useCloudSync } from '@/context/CloudSyncContext'
 import { useCollection } from '@/context/CollectionContext'
 import { LimboSection } from '@/components/LimboSection'
-import { StickerVerseCameraSection } from '@/components/StickerVerseCameraSection'
 import { buildShareDuplicatesText, buildShareMissingText } from '@/utils/shareTexts'
 
 async function clipboard(text: string) {
@@ -69,8 +68,6 @@ export function MorePage({
           </button>
         </div>
       </section>
-
-      <StickerVerseCameraSection onOpenSticker={onOpenSticker} notify={notify} />
 
       <LimboSection onOpenSticker={onOpenSticker} notify={notify} />
 

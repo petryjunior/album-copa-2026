@@ -59,13 +59,6 @@ const TEAMS_ORDER: ReadonlyArray<{
   { group: 'L', code: 'PAN', name: 'Panamá' },
 ]
 
-const TEAM_CODE_SET: ReadonlySet<string> = new Set(TEAMS_ORDER.map((t) => t.code))
-
-/** Código FIFA de 3 letras presente no catálogo (48 seleções). */
-export function isCatalogTeamCode(code: string): boolean {
-  return TEAM_CODE_SET.has(code)
-}
-
 /** Estrutura física Panini Copa 2026: 00 → FWC 1–8 → 48×(1–20) → FWC 9–19 = 980. */
 function buildCatalog(): CatalogEntry[] {
   if (TEAMS_ORDER.length !== 48) throw new Error(`Esperado 48 seleções, temos ${TEAMS_ORDER.length}`)

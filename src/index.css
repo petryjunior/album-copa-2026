@@ -1,27 +1,3 @@
 @import 'tailwindcss';
 
 @variant dark (&:where(.dark *));
-
-/* Barra guia da câmera ao vivo (verso da figurinha).
-   Nota: translateY(100%) usa a altura do próprio elemento (~5px), não do contentor —
-   por isso animamos `top` em % relativos ao .verse-sweep-track. */
-@keyframes verse-sweep-y {
-  0% {
-    top: 0;
-  }
-  100% {
-    top: calc(100% - 5px);
-  }
-}
-
-.verse-sweep-bar {
-  animation: verse-sweep-y 2.75s ease-in-out infinite alternate;
-  will-change: top;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .verse-sweep-bar {
-    animation: none;
-    top: 42%;
-  }
-}
