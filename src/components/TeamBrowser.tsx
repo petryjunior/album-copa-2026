@@ -300,22 +300,35 @@ export function TeamBrowser({
         >
           Voltar
         </button>
-        <div className="flex min-w-0 flex-1 items-center gap-3">
+        <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
           <TeamFlag
             code={team.code}
             title={`${team.group} · ${team.name}`}
             className="!h-8 !w-11 shrink-0 shadow-sm ring-2 ring-white"
           />
-          <div className="min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-[0.25em] opacity-70" style={{ color: theme.primary }}>
-              Grupo {team.group}
-            </p>
-            <p className="truncate text-lg font-black leading-tight" style={{ color: theme.primaryDark }}>
-              <span>{team.name}</span>{' '}
+          <div className="min-w-0 flex-1">
+            <div className="hidden min-w-0 sm:block">
+              <p className="text-[10px] font-bold uppercase tracking-[0.25em] opacity-70" style={{ color: theme.primary }}>
+                Grupo {team.group}
+              </p>
+              <p className="truncate text-lg font-black leading-tight" style={{ color: theme.primaryDark }}>
+                <span>{team.name}</span>{' '}
+                <span className="text-sm font-bold tabular-nums" style={{ color: theme.primary }}>
+                  ({teamSlots.filled}/{teamSlots.total})
+                </span>
+              </p>
+            </div>
+            <div
+              className="flex min-w-0 items-baseline gap-2 sm:hidden"
+              title={`${team.name} · Grupo ${team.group}`}
+            >
+              <span className="shrink-0 text-xl font-black tracking-tight" style={{ color: theme.primaryDark }}>
+                {team.code}
+              </span>
               <span className="text-sm font-bold tabular-nums" style={{ color: theme.primary }}>
                 ({teamSlots.filled}/{teamSlots.total})
               </span>
-            </p>
+            </div>
           </div>
         </div>
         <ManualCloudSaveButton notify={notify} className="min-h-11 shrink-0 bg-white/95" />
