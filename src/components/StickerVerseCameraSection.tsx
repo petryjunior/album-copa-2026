@@ -3,6 +3,11 @@ import type { CatalogEntry } from '@/types/catalog'
 import { useCollection } from '@/context/CollectionContext'
 import { resolveVerseCandidates } from '@/utils/stickerVerseOcr'
 import { stickerShareLabel } from '@/utils/shareTexts'
+import {
+  applyVideoAutofocusPreferences,
+  normalizedPointInVideoFrame,
+  refocusVideoTrack,
+} from '@/utils/videoCameraFocus'
 
 type Phase = 'idle' | 'preparing' | 'scanning' | 'busy' | 'pick' | 'result' | 'error'
 
@@ -202,18 +207,37 @@ export function StickerVerseCameraSection({
     setScanHint('A pedir acesso à câmera…')
     setPhase('preparing')
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: 'environment' } },
-        audio: false,
-      })
+      let stream: MediaStream
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: {
+            facingMode: { ideal: 'environment' },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+          },
+        })
+      } catch {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: { facingMode: { ideal: 'environment' } },
+        })
+      }
       if (!videoRef.current) {
         for (const t of stream.getTracks()) t.stop()
         throw new Error('no video element')
       }
       streamRef.current = stream
+      const track = stream.getVideoTracks()[0]
+      if (track) {
+        await applyVideoAutofocusPreferences(track)
+      }
       const v = videoRef.current
       v.srcObject = stream
       await v.play()
+      if (track) {
+        await applyVideoAutofocusPreferences(track)
+      }
       setScanHint('A preparar reconhecimento de texto…')
       const { createWorker } = await import('tesseract.js')
       const worker = await createWorker('eng', 1, { logger: () => {} })
@@ -232,6 +256,32 @@ export function StickerVerseCameraSection({
       setPhase('error')
     }
   }, [stopLiveCapture, tickOcrFrame])
+
+  const refocusFromButton = useCallback(() => {
+    const track = streamRef.current?.getVideoTracks()[0]
+    if (!track) return
+    void refocusVideoTrack(track).then((ok) => {
+      setScanHint(
+        ok
+          ? 'Refoco pedido ao telemóvel — mantém ~18–25 cm e firmeza.'
+          : 'Este aparelho/browser pode não expor controlo de foco ao site.',
+      )
+    })
+  }, [])
+
+  const refocusFromPointer = useCallback((clientX: number, clientY: number) => {
+    const track = streamRef.current?.getVideoTracks()[0]
+    const v = videoRef.current
+    if (!track || !v) return
+    const pt = normalizedPointInVideoFrame(v, clientX, clientY)
+    void refocusVideoTrack(track, pt).then((ok) => {
+      setScanHint(
+        ok
+          ? 'Foco pedido nesse ponto — aguenta um instante.'
+          : 'Tenta o botão Refocar ou afasta/raproxima a figurinha (mín. foco ~15 cm).',
+      )
+    })
+  }, [])
 
   useEffect(() => {
     return () => {
@@ -285,8 +335,9 @@ export function StickerVerseCameraSection({
     <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
       <h2 className="text-base font-black text-slate-900">Câmera — verso da figurinha</h2>
       <p className="mb-3 mt-1 text-xs text-slate-600">
-        Modo ao vivo: aponta a câmera ao verso; o app lê o vídeo em intervalos (como um leitor de códigos). Mantém firme
-        até aparecer confirmação. Também podes carregar uma imagem se a câmera não estiver disponível.
+        Modo ao vivo: mantém cerca de <strong>18–25 cm</strong> (muito perto pode ficar fora da zona de foco da câmera).
+        Usa <strong>Refocar</strong> ou toca no vídeo se o texto continuar desfocado — muitos browsers limitam o foco
+        automático em páginas web. Também podes carregar uma imagem.
       </p>
       <input
         ref={inputRef}
@@ -337,6 +388,16 @@ export function StickerVerseCameraSection({
                 autoPlay
                 aria-hidden
               />
+              {phase === 'scanning' && (
+                <div
+                  className="absolute inset-0 z-[12] touch-manipulation"
+                  aria-hidden
+                  onPointerUp={(e) => {
+                    if (e.pointerType === 'mouse' && e.button !== 0) return
+                    refocusFromPointer(e.clientX, e.clientY)
+                  }}
+                />
+              )}
               <div className="pointer-events-none absolute inset-0 ring-2 ring-inset ring-white/10" />
               {phase === 'preparing' && (
                 <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/80 px-6">
@@ -361,16 +422,31 @@ export function StickerVerseCameraSection({
                       Leitura #{scanPass}
                       {scanBusy ? ' · a processar quadro…' : ' · pronto para o próximo'}
                     </p>
+                    <p className="mt-2 text-center text-[11px] leading-snug text-white/75">
+                      Toca no vídeo onde está o código ou usa Refocar. iPhone/Safari por vezes não deixam o site
+                      ajustar o foco.
+                    </p>
                   </div>
                 </>
               )}
-              <button
-                type="button"
-                className="absolute left-3 top-3 z-20 rounded-full bg-black/55 px-4 py-2 text-sm font-semibold text-white backdrop-blur-sm hover:bg-black/70"
-                onClick={() => void closeOverlay()}
-              >
-                Fechar
-              </button>
+              <div className="absolute right-3 top-3 z-20 flex gap-2">
+                {phase === 'scanning' && (
+                  <button
+                    type="button"
+                    className="rounded-full bg-teal-700/95 px-4 py-2 text-sm font-semibold text-white shadow-md hover:bg-teal-600"
+                    onClick={refocusFromButton}
+                  >
+                    Refocar
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="rounded-full bg-black/55 px-4 py-2 text-sm font-semibold text-white backdrop-blur-sm hover:bg-black/70"
+                  onClick={() => void closeOverlay()}
+                >
+                  Fechar
+                </button>
+              </div>
             </div>
           )}
 
