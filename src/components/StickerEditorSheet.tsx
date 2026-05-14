@@ -29,14 +29,6 @@ export function StickerEditorSheet({ entry, notify, onClose }: Props) {
   return (
     <BottomSheet open title={title} onClose={onClose}>
       <p className="mb-0.5 text-[11px] leading-snug text-slate-600 sm:mb-1 sm:text-sm">{subtitle}</p>
-      <p className="mb-2 text-[10px] leading-snug text-slate-500 sm:mb-3 sm:text-xs sm:leading-normal">
-        Na grade: toque ou clique para alternar entre <strong>sem</strong> cópia e ter <strong>1</strong> cópia (com
-        pelo menos uma, toque de novo para limpar); mantenha pressionado (celular) ou clique com o botão direito (mouse)
-        para abrir este painel e escolher outra quantidade. O contador <strong>No limbo</strong> é para figurinhas de
-        troca <strong>ainda não coladas</strong> — não entram em faltantes nem em repetidas do álbum. Ao aumentar a
-        quantidade <strong>no álbum</strong> (aqui ou com um toque na grade), o app <strong>tira do limbo</strong> a
-        mesma quantidade, como se tivesse colado no álbum.
-      </p>
       <details className="mb-2 text-[10px] leading-snug text-slate-500 sm:mb-4 sm:text-xs [&_summary]:cursor-pointer [&_summary]:text-slate-600">
         <summary className="font-medium text-slate-600">Migrar coleção via número interno (opcional)</summary>
         <p className="mt-1.5 text-[10px] leading-snug text-slate-500 sm:mt-2 sm:text-xs">
