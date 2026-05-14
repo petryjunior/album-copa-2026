@@ -17,6 +17,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.105.1",
     "lz-string": "^1.5.0",
+    "tesseract.js": "^5.1.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },
