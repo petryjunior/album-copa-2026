@@ -109,11 +109,6 @@ export function StickerEditorSheet({ entry, notify, onClose }: Props) {
           Remover todas do álbum
         </button>
       </div>
-      <p className="mt-2 text-[10px] leading-snug text-slate-500 sm:mt-4 sm:text-xs sm:leading-normal">
-        <strong>No álbum:</strong> quantas iguais você já colou ou conta como no álbum. O que passa da primeira vira
-        repetida (marcador rosado na grade). <strong>No limbo:</strong> só trocas ainda não coladas — ao subir o número
-        no álbum (grade ou + aqui), o limbo desce na mesma medida. Lista em Mais → Limbo.
-      </p>
       <div className="mt-3 flex justify-center sm:mt-6">
         <ManualCloudSaveButton
           notify={notify}
