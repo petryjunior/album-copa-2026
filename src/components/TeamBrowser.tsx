@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { CatalogEntry } from '@/types/catalog'
 import { getTeamsUnique } from '@/catalog/catalog'
 import { StickerGrid } from '@/components/StickerGrid'
@@ -61,6 +61,45 @@ export function TeamBrowser({
   const [code, setCode] = useState<string | null>(null)
   const [filter, setFilter] = useState('')
   const [sortMode, setSortMode] = useState<SortMode>('group')
+
+  const prevDetailCodeRef = useRef<string | null>(null)
+  const detailHistoryPushedRef = useRef(false)
+  const activeCodeRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    activeCodeRef.current = code
+  }, [code])
+
+  useEffect(() => {
+    const onPopState = () => {
+      if (activeCodeRef.current !== null) {
+        detailHistoryPushedRef.current = false
+        setCode(null)
+      }
+    }
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  }, [])
+
+  useEffect(() => {
+    if (code === null) {
+      prevDetailCodeRef.current = null
+      return
+    }
+    if (prevDetailCodeRef.current === null) {
+      history.pushState({ __albumTeamBrowser: 1 }, '', window.location.href)
+      detailHistoryPushedRef.current = true
+    }
+    prevDetailCodeRef.current = code
+  }, [code])
+
+  const goBackToList = useCallback(() => {
+    if (detailHistoryPushedRef.current) {
+      history.back()
+    } else {
+      setCode(null)
+    }
+  }, [])
 
   const groupSections = useMemo(() => {
     const order: string[] = []
@@ -226,7 +265,7 @@ export function TeamBrowser({
         <p>Não foi possível carregar esta seleção.</p>
         <button
           type="button"
-          onClick={() => setCode(null)}
+          onClick={goBackToList}
           className="rounded-2xl bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800"
         >
           Voltar à lista
@@ -255,7 +294,7 @@ export function TeamBrowser({
       >
         <button
           type="button"
-          onClick={() => setCode(null)}
+          onClick={goBackToList}
           className="rounded-2xl border-2 bg-white/95 px-3 py-2 text-sm font-semibold shadow-sm transition hover:bg-white"
           style={{ borderColor: theme.accent, color: theme.primaryDark }}
         >
