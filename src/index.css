@@ -1,3 +1,25 @@
 @import 'tailwindcss';
 
 @variant dark (&:where(.dark *));
+
+/* Barra guia da câmera ao vivo (verso da figurinha) */
+@keyframes verse-sweep-y {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(calc(100% - 5px));
+  }
+}
+
+.verse-sweep-bar {
+  animation: verse-sweep-y 2.75s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .verse-sweep-bar {
+    animation: none;
+    transform: translateY(calc(42% - 2px));
+  }
+}

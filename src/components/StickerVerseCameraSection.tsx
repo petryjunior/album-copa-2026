@@ -16,6 +16,17 @@ const MAX_FRAME_SIDE = 960
 /** Leituras consecutivas com um único candidato igual antes de aceitar (como “lock” em leitor de código). */
 const STABLE_HITS_REQUIRED = 2
 
+/** Fração da altura do quadro usada na faixa de OCR (centrada na barra guia). */
+const STRIP_H_FRAC = 0.2
+/** Fração da largura — código costuma estar mais à direita no verso. */
+const STRIP_W_FRAC = 0.58
+/** Desloca o centro da faixa ligeiramente para a direita (normalizado 0–1). */
+const STRIP_X_BIAS = 0.07
+
+function clamp(n: number, lo: number, hi: number): number {
+  return Math.min(hi, Math.max(lo, n))
+}
+
 async function ocrImageFile(file: File, onProgress: (p: number) => void): Promise<string> {
   const { createWorker } = await import('tesseract.js')
   const worker = await createWorker('eng', 1, {
@@ -55,6 +66,9 @@ export function StickerVerseCameraSection({
   const stableIdRef = useRef<number | null>(null)
   const stableCountRef = useRef(0)
   const scanPassRef = useRef(0)
+  const sweepBarRef = useRef<HTMLDivElement>(null)
+  const stripCanvasRef = useRef<HTMLCanvasElement | null>(null)
+  const sweepFocusIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const [phase, setPhase] = useState<Phase>('idle')
   const [busyPct, setBusyPct] = useState(0)
@@ -71,6 +85,10 @@ export function StickerVerseCameraSection({
     if (scanTimerRef.current != null) {
       clearInterval(scanTimerRef.current)
       scanTimerRef.current = null
+    }
+    if (sweepFocusIntervalRef.current != null) {
+      clearInterval(sweepFocusIntervalRef.current)
+      sweepFocusIntervalRef.current = null
     }
     const stream = streamRef.current
     if (stream) {
@@ -139,9 +157,38 @@ export function StickerVerseCameraSection({
       if (!ctx) return
       ctx.drawImage(video, 0, 0, cw, ch)
 
+      let ocrCanvas: HTMLCanvasElement = canvas
+      const bar = sweepBarRef.current
+      if (bar && video) {
+        const br = bar.getBoundingClientRect()
+        const cx = br.left + br.width / 2
+        const cy = br.top + br.height / 2
+        let { x: nx, y: ny } = normalizedPointInVideoFrame(video, cx, cy)
+        nx = clamp(nx + STRIP_X_BIAS, 0.08, 0.92)
+        ny = clamp(ny, 0.06, 0.94)
+        const sw = Math.floor(STRIP_W_FRAC * cw)
+        const sh = Math.floor(STRIP_H_FRAC * ch)
+        let sx = Math.floor(nx * cw - sw / 2)
+        let sy = Math.floor(ny * ch - sh / 2)
+        sx = clamp(sx, 0, cw - sw)
+        sy = clamp(sy, 0, ch - sh)
+        let strip = stripCanvasRef.current
+        if (!strip) {
+          strip = document.createElement('canvas')
+          stripCanvasRef.current = strip
+        }
+        strip.width = sw
+        strip.height = sh
+        const sctx = strip.getContext('2d')
+        if (sctx) {
+          sctx.drawImage(canvas, sx, sy, sw, sh, 0, 0, sw, sh)
+          ocrCanvas = strip
+        }
+      }
+
       const {
         data: { text },
-      } = await worker.recognize(canvas)
+      } = await worker.recognize(ocrCanvas)
 
       if (genAtStart !== scanGenRef.current) return
 
@@ -188,7 +235,7 @@ export function StickerVerseCameraSection({
       } else {
         stableIdRef.current = null
         stableCountRef.current = 0
-        setScanHint('À procura de código no verso (ex.: BIH 12, FWC 7)…')
+        setScanHint('Alinha o código com a barra guia (sobe e desce)…')
       }
     } catch {
       if (genAtStart === scanGenRef.current) {
@@ -243,7 +290,7 @@ export function StickerVerseCameraSection({
       const worker = await createWorker('eng', 1, { logger: () => {} })
       workerRef.current = worker
       setPhase('scanning')
-      setScanHint('À procura de código no verso…')
+      setScanHint('Segue a barra: coloca o código do verso na linha luminosa.')
       void tickOcrFrame()
       scanTimerRef.current = window.setInterval(() => {
         void tickOcrFrame()
@@ -269,19 +316,26 @@ export function StickerVerseCameraSection({
     })
   }, [])
 
-  const refocusFromPointer = useCallback((clientX: number, clientY: number) => {
-    const track = streamRef.current?.getVideoTracks()[0]
-    const v = videoRef.current
-    if (!track || !v) return
-    const pt = normalizedPointInVideoFrame(v, clientX, clientY)
-    void refocusVideoTrack(track, pt).then((ok) => {
-      setScanHint(
-        ok
-          ? 'Foco pedido nesse ponto — aguenta um instante.'
-          : 'Tenta o botão Refocar ou afasta/raproxima a figurinha (mín. foco ~15 cm).',
-      )
-    })
-  }, [])
+  useEffect(() => {
+    if (phase !== 'scanning') return
+    sweepFocusIntervalRef.current = window.setInterval(() => {
+      const bar = sweepBarRef.current
+      const video = videoRef.current
+      const track = streamRef.current?.getVideoTracks()[0]
+      if (!bar || !video || !track) return
+      const br = bar.getBoundingClientRect()
+      const cx = br.left + br.width / 2
+      const cy = br.top + br.height / 2
+      const pt = normalizedPointInVideoFrame(video, cx, cy)
+      void refocusVideoTrack(track, pt)
+    }, 420)
+    return () => {
+      if (sweepFocusIntervalRef.current != null) {
+        clearInterval(sweepFocusIntervalRef.current)
+        sweepFocusIntervalRef.current = null
+      }
+    }
+  }, [phase])
 
   useEffect(() => {
     return () => {
@@ -335,9 +389,9 @@ export function StickerVerseCameraSection({
     <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
       <h2 className="text-base font-black text-slate-900">Câmera — verso da figurinha</h2>
       <p className="mb-3 mt-1 text-xs text-slate-600">
-        Modo ao vivo: mantém cerca de <strong>18–25 cm</strong> (muito perto pode ficar fora da zona de foco da câmera).
-        Usa <strong>Refocar</strong> ou toca no vídeo se o texto continuar desfocado — muitos browsers limitam o foco
-        automático em páginas web. Também podes carregar uma imagem.
+        Modo ao vivo: uma <strong>barra guia</strong> sobe e desce — alinha a zona do <strong>código do verso</strong> com
+        essa barra. O foco e a leitura seguem a barra (quando o telemóvel permitir). Mantém cerca de{' '}
+        <strong>18–25 cm</strong>. Usa <strong>Refocar</strong> se continuar difuso. Também podes carregar uma imagem.
       </p>
       <input
         ref={inputRef}
@@ -388,16 +442,6 @@ export function StickerVerseCameraSection({
                 autoPlay
                 aria-hidden
               />
-              {phase === 'scanning' && (
-                <div
-                  className="absolute inset-0 z-[12] touch-manipulation"
-                  aria-hidden
-                  onPointerUp={(e) => {
-                    if (e.pointerType === 'mouse' && e.button !== 0) return
-                    refocusFromPointer(e.clientX, e.clientY)
-                  }}
-                />
-              )}
               <div className="pointer-events-none absolute inset-0 ring-2 ring-inset ring-white/10" />
               {phase === 'preparing' && (
                 <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/80 px-6">
@@ -410,21 +454,30 @@ export function StickerVerseCameraSection({
               )}
               {phase === 'scanning' && (
                 <>
-                  <div className="pointer-events-none absolute inset-x-5 top-16 bottom-36 rounded-2xl border-2 border-dashed border-teal-400/70 shadow-[0_0_0_9999px_rgba(0,0,0,0.25)]" />
+                  <div className="pointer-events-none absolute inset-x-4 top-[4.25rem] bottom-[10rem] z-[13] flex flex-col rounded-2xl border-2 border-dashed border-teal-400/65 bg-black/15 p-1.5 shadow-[0_0_0_9999px_rgba(0,0,0,0.22)]">
+                    <p className="shrink-0 px-1 pb-1 text-center text-[10px] font-bold uppercase leading-tight tracking-wide text-teal-100">
+                      Alinha o código com a barra
+                    </p>
+                    <div className="verse-sweep-track relative w-full flex-1 min-h-[120px] overflow-hidden rounded-lg bg-teal-950/25">
+                      <div
+                        ref={sweepBarRef}
+                        className="verse-sweep-bar absolute left-[5%] right-[5%] top-0 h-[5px] rounded-full bg-gradient-to-r from-transparent via-teal-200 to-transparent shadow-[0_0_16px_rgba(153,246,228,0.95)]"
+                      />
+                    </div>
+                  </div>
                   <div className="pointer-events-none absolute left-0 right-0 top-14 flex justify-center">
                     <span className="rounded-full bg-black/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-teal-200">
-                      Ao vivo · OCR
+                      Ao vivo · OCR na faixa da barra
                     </span>
                   </div>
                   <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/80 to-transparent px-4 pb-10 pt-20">
                     <p className="text-center text-sm font-semibold text-white drop-shadow">{scanHint}</p>
                     <p className="mt-1 text-center text-xs text-white/85">
                       Leitura #{scanPass}
-                      {scanBusy ? ' · a processar quadro…' : ' · pronto para o próximo'}
+                      {scanBusy ? ' · a processar faixa da barra…' : ' · pronto para o próximo quadro'}
                     </p>
                     <p className="mt-2 text-center text-[11px] leading-snug text-white/75">
-                      Toca no vídeo onde está o código ou usa Refocar. iPhone/Safari por vezes não deixam o site
-                      ajustar o foco.
+                      iPhone/Safari por vezes não deixam o site ajustar o foco — usa Refocar ou imagem da galeria.
                     </p>
                   </div>
                 </>
