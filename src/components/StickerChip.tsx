@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import type { CatalogEntry } from '@/types/catalog'
+import { useCollection } from '@/context/CollectionContext'
 import { teamFlagImageUrl } from '@/lib/teamFlags'
 import type { TeamVisualTheme } from '@/lib/teamThemes'
 
@@ -178,6 +179,8 @@ function PrimaryLabel({
 }
 
 export function StickerChip({ entry, qty, onMarkHaveOne, onOpenEditor, visualTheme }: Props) {
+  const { limboState } = useCollection()
+  const limbo = limboState[entry.id] ?? 0
   const has = qty >= 1
   const dup = Math.max(0, qty - 1)
   const flagUrl =
@@ -241,6 +244,10 @@ export function StickerChip({ entry, qty, onMarkHaveOne, onOpenEditor, visualThe
   const ariaHint = has
     ? ', registrada como tendo pelo menos uma'
     : ', falta'
+  const limboHint =
+    limbo > 0
+      ? ` Há ${limbo} no limbo (trocas, ainda não coladas no álbum).`
+      : ''
   const tapHint = has
     ? 'Toque ou clique para limpar (quantidade 0).'
     : 'Toque ou clique para marcar que tem uma cópia.'
@@ -254,10 +261,14 @@ export function StickerChip({ entry, qty, onMarkHaveOne, onOpenEditor, visualThe
       onTouchEnd={handleTouchEndOrCancel}
       onTouchCancel={handleTouchEndOrCancel}
       onTouchMove={handleTouchMove}
-      title="Toque: marcar 1 ou limpar · Segure / clique direito: quantidade"
+      title={
+        limbo > 0
+          ? `Toque: marcar 1 ou limpar · Segure / clique direito: quantidade · ponto azul = ${limbo} no limbo`
+          : 'Toque: marcar 1 ou limpar · Segure / clique direito: quantidade'
+      }
       className={chipCls}
       style={chipStyle}
-      aria-label={`Figurinha ${label}${ariaHint}. ${tapHint} Clique direito ou mantenha pressionado para definir a quantidade.`}
+      aria-label={`Figurinha ${label}${ariaHint}. ${tapHint}${limboHint} Clique direito ou mantenha pressionado para definir a quantidade.`}
     >
       {useFlagBg && flagUrl && !flagBroken ? (
         <span
@@ -291,6 +302,12 @@ export function StickerChip({ entry, qty, onMarkHaveOne, onOpenEditor, visualThe
         <span className="absolute -right-1 -top-1 z-[3] flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-bold text-white">
           {dup > 99 ? '99+' : dup}
         </span>
+      )}
+      {limbo > 0 && (
+        <span
+          aria-hidden
+          className="absolute -bottom-1 -right-1 z-[3] h-3.5 w-3.5 rounded-full bg-blue-600 shadow-sm ring-2 ring-white"
+        />
       )}
     </button>
   )
