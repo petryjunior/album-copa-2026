@@ -23,7 +23,6 @@ type Combined = { album: QtyMap; limbo: QtyMap }
 type Action =
   | { type: 'hydrate'; album: QtyMap; limbo: QtyMap }
   | { type: 'setQty'; id: number; qty: number }
-  | { type: 'setLimboQty'; id: number; qty: number }
   | { type: 'inc'; id: number; delta: number }
   | { type: 'incLimbo'; id: number; delta: number }
   | { type: 'bulkEnsureMin'; ids: number[]; min: number }
@@ -41,20 +40,52 @@ function stripZeroKey(map: QtyMap, id: number): QtyMap {
   return rest
 }
 
+/** Ao aumentar a quantidade no álbum, consome o mesmo nº de unidades do limbo (trocas coladas). */
+function consumeLimboOnAlbumIncrease(prevA: QtyMap, nextA: QtyMap, prevL: QtyMap): QtyMap {
+  const L: QtyMap = { ...prevL }
+  const ids = new Set<number>()
+  for (const k of Object.keys(prevA)) {
+    const id = Number(k)
+    if (!Number.isNaN(id)) ids.add(id)
+  }
+  for (const k of Object.keys(nextA)) {
+    const id = Number(k)
+    if (!Number.isNaN(id)) ids.add(id)
+  }
+  for (const id of ids) {
+    const delta = (nextA[id] ?? 0) - (prevA[id] ?? 0)
+    if (delta <= 0) continue
+    const lim = L[id] ?? 0
+    if (lim <= 0) continue
+    const take = Math.min(delta, lim)
+    const remain = lim - take
+    if (remain <= 0) {
+      delete L[id]
+    } else {
+      L[id] = remain
+    }
+  }
+  return L
+}
+
 function combinedReducer(s: Combined, action: Action): Combined {
   switch (action.type) {
     case 'hydrate':
       return { album: { ...action.album }, limbo: { ...action.limbo } }
-    case 'setQty':
-      return { ...s, album: { ...s.album, [action.id]: clampQty(action.qty) } }
-    case 'setLimboQty': {
-      const q = clampQty(action.qty)
-      if (q === 0) return { ...s, limbo: stripZeroKey(s.limbo, action.id) }
-      return { ...s, limbo: { ...s.limbo, [action.id]: q } }
+    case 'setQty': {
+      const nextAlbum = { ...s.album, [action.id]: clampQty(action.qty) }
+      return {
+        album: nextAlbum,
+        limbo: consumeLimboOnAlbumIncrease(s.album, nextAlbum, s.limbo),
+      }
     }
     case 'inc': {
       const cur = s.album[action.id] ?? 0
-      return { ...s, album: { ...s.album, [action.id]: clampQty(cur + action.delta) } }
+      const nextAlbum = { ...s.album, [action.id]: clampQty(cur + action.delta) }
+      return {
+        album: nextAlbum,
+        limbo: consumeLimboOnAlbumIncrease(s.album, nextAlbum, s.limbo),
+      }
     }
     case 'incLimbo': {
       const cur = s.limbo[action.id] ?? 0
@@ -68,7 +99,7 @@ function combinedReducer(s: Combined, action: Action): Combined {
         const cur = next[id] ?? 0
         next[id] = Math.max(cur, clampQty(action.min))
       }
-      return { ...s, album: next }
+      return { album: next, limbo: consumeLimboOnAlbumIncrease(s.album, next, s.limbo) }
     }
     case 'bulkAdd': {
       const next = { ...s.album }
@@ -76,7 +107,7 @@ function combinedReducer(s: Combined, action: Action): Combined {
         const cur = next[id] ?? 0
         next[id] = clampQty(cur + action.add)
       }
-      return { ...s, album: next }
+      return { album: next, limbo: consumeLimboOnAlbumIncrease(s.album, next, s.limbo) }
     }
     case 'clearAll':
       return { album: {}, limbo: {} }
@@ -139,7 +170,6 @@ type Ctx = {
   /** ISO timestamp do último salvamento no armazenamento local deste navegador */
   lastLocalSavedAt: string | null
   setQty: (id: number, qty: number) => void
-  setLimboQty: (id: number, qty: number) => void
   inc: (id: number, delta: number) => void
   incLimbo: (id: number, delta: number) => void
   bulkEnsureMin: (ids: number[], min: number) => void
@@ -190,10 +220,6 @@ export function CollectionProvider({ children }: { children: ReactNode }) {
 
   const setQty = useCallback((id: number, qty: number) => {
     dispatch({ type: 'setQty', id, qty })
-  }, [])
-
-  const setLimboQty = useCallback((id: number, qty: number) => {
-    dispatch({ type: 'setLimboQty', id, qty })
   }, [])
 
   const inc = useCallback((id: number, delta: number) => {
@@ -341,7 +367,6 @@ export function CollectionProvider({ children }: { children: ReactNode }) {
       limboState,
       lastLocalSavedAt,
       setQty,
-      setLimboQty,
       inc,
       incLimbo,
       bulkEnsureMin,
@@ -359,7 +384,6 @@ export function CollectionProvider({ children }: { children: ReactNode }) {
       limboState,
       lastLocalSavedAt,
       setQty,
-      setLimboQty,
       inc,
       incLimbo,
       bulkEnsureMin,

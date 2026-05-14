@@ -29,9 +29,9 @@ export function LimboSection({ onOpenSticker, notify }: Props) {
         <div>
           <h2 className="text-base font-black text-slate-900">Limbo</h2>
           <p className="mt-1 max-w-prose text-xs leading-relaxed text-slate-700">
-            Figurinhas que você já conseguiu em trocas mas <strong>ainda não colou no álbum</strong>. Elas ficam aqui até
-            você colar e marcar normalmente na grade — assim você não conta como “já tenho” nas trocas e evita pedir de
-            novo a mesma cromo por esquecimento.
+            Figurinhas que você já conseguiu em trocas mas <strong>ainda não colou no álbum</strong>. Ao aumentar a
+            quantidade <strong>no álbum</strong> (grade ou editor), o app remove do limbo na mesma medida — não precisa
+            zerar o limbo à mão.
           </p>
         </div>
         <ManualCloudSaveButton notify={notify} className="shrink-0" />
@@ -39,8 +39,9 @@ export function LimboSection({ onOpenSticker, notify }: Props) {
 
       {rows.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-violet-200 bg-white/80 px-3 py-4 text-center text-sm text-slate-600">
-          Nada no limbo. Quando receber figurinhas em troca antes de colar, abra o editor (toque longo na grade ou em
-          Repetidas) e use o contador <strong>No limbo</strong>.
+          Nada no limbo. Quando receber figurinhas em troca antes de colar, use o contador <strong>No limbo</strong> neste
+          editor (toque longo na grade ou em Repetidas). Ao marcar no <strong>álbum</strong> (toque na grade ou + em «No
+          álbum»), o app baixa o limbo na mesma quantidade.
         </p>
       ) : (
         <>
