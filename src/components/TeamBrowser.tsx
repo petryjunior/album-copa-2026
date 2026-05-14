@@ -95,6 +95,16 @@ export function TeamBrowser({
     return catalog.filter((e) => e.teamCode === code)
   }, [catalog, code])
 
+  const selectedTeam = useMemo(
+    () => (code ? (teams.find((t) => t.code === code) ?? null) : null),
+    [code, teams],
+  )
+
+  const teamSlots = useMemo(() => {
+    if (!selectedTeam) return { filled: 0, total: 0 }
+    return countTeamSlotsFilled(catalog, state, selectedTeam.code)
+  }, [catalog, state, selectedTeam])
+
   if (!code) {
     return (
       <div className="space-y-5 pb-36">
@@ -209,12 +219,23 @@ export function TeamBrowser({
     )
   }
 
-  const team = teams.find((t) => t.code === code)!
+  const team = selectedTeam
+  if (!team) {
+    return (
+      <div className="space-y-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-6 text-center text-sm text-rose-900">
+        <p>Não foi possível carregar esta seleção.</p>
+        <button
+          type="button"
+          onClick={() => setCode(null)}
+          className="rounded-2xl bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800"
+        >
+          Voltar à lista
+        </button>
+      </div>
+    )
+  }
+
   const theme = getTeamTheme(team.code)
-  const teamSlots = useMemo(
-    () => countTeamSlotsFilled(catalog, state, team.code),
-    [catalog, state, team.code],
-  )
   const teamIndex = teams.findIndex((t) => t.code === code)
   const prevTeam = teamIndex > 0 ? teams[teamIndex - 1] : null
   const nextTeam = teamIndex >= 0 && teamIndex < teams.length - 1 ? teams[teamIndex + 1] : null
