@@ -10,8 +10,9 @@ type Props = {
 }
 
 export function StickerEditorSheet({ entry, notify, onClose }: Props) {
-  const { state, setQty, inc } = useCollection()
+  const { state, limboState, setQty, setLimboQty, inc, incLimbo } = useCollection()
   const qty = state[entry.id] ?? 0
+  const limboQty = limboState[entry.id] ?? 0
 
   const title =
     entry.segment === 'team'
@@ -31,7 +32,9 @@ export function StickerEditorSheet({ entry, notify, onClose }: Props) {
       <p className="mb-3 text-xs text-slate-500">
         Na grade: toque ou clique para alternar entre <strong>sem</strong> cópia e ter <strong>1</strong> cópia (com
         pelo menos uma, toque de novo para limpar); mantenha pressionado (celular) ou clique com o botão direito (mouse)
-        para abrir este painel e escolher outra quantidade.
+        para abrir este painel e escolher outra quantidade. O contador <strong>No limbo</strong> é só para figurinhas que
+        você já tem em troca mas <strong>ainda não colou no álbum</strong> — não entra em faltantes nem em repetidas do
+        álbum.
       </p>
       <details className="mb-4 text-xs text-slate-500 [&_summary]:cursor-pointer [&_summary]:text-slate-600">
         <summary className="font-medium text-slate-600">Migrar coleção via número interno (opcional)</summary>
@@ -47,11 +50,12 @@ export function StickerEditorSheet({ entry, notify, onClose }: Props) {
           Cromo com acabamento especial (metalizado) segundo a coleção oficial.
         </p>
       )}
+      <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">No álbum</p>
       <div className="flex items-center justify-center gap-6 py-2">
         <button
           type="button"
           className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-300 bg-slate-50 text-xl font-bold text-slate-800 hover:bg-slate-100"
-          aria-label="Diminuir uma cópia"
+          aria-label="Diminuir uma cópia no álbum"
           onClick={() => inc(entry.id, -1)}
         >
           −
@@ -60,8 +64,28 @@ export function StickerEditorSheet({ entry, notify, onClose }: Props) {
         <button
           type="button"
           className="flex h-12 w-12 items-center justify-center rounded-2xl border border-teal-700 bg-teal-600 text-xl font-bold text-white hover:bg-teal-700"
-          aria-label="Aumentar uma cópia"
+          aria-label="Aumentar uma cópia no álbum"
           onClick={() => inc(entry.id, 1)}
+        >
+          +
+        </button>
+      </div>
+      <p className="mb-1 mt-5 text-xs font-semibold uppercase tracking-wide text-violet-700">No limbo</p>
+      <div className="flex items-center justify-center gap-6 py-2">
+        <button
+          type="button"
+          className="flex h-12 w-12 items-center justify-center rounded-2xl border border-violet-300 bg-violet-50 text-xl font-bold text-violet-900 hover:bg-violet-100"
+          aria-label="Diminuir uma no limbo"
+          onClick={() => incLimbo(entry.id, -1)}
+        >
+          −
+        </button>
+        <div className="min-w-16 text-center text-4xl font-extrabold text-violet-950">{limboQty}</div>
+        <button
+          type="button"
+          className="flex h-12 w-12 items-center justify-center rounded-2xl border border-violet-600 bg-violet-600 text-xl font-bold text-white hover:bg-violet-700"
+          aria-label="Aumentar uma no limbo"
+          onClick={() => incLimbo(entry.id, 1)}
         >
           +
         </button>
@@ -79,12 +103,22 @@ export function StickerEditorSheet({ entry, notify, onClose }: Props) {
           onClick={() => setQty(entry.id, 0)}
           className="rounded-2xl border border-rose-200 bg-rose-50 py-3 text-sm font-semibold text-rose-900 hover:bg-rose-100"
         >
-          Remover todas
+          Remover todas do álbum
+        </button>
+      </div>
+      <div className="mt-3">
+        <button
+          type="button"
+          onClick={() => setLimboQty(entry.id, 0)}
+          className="w-full rounded-2xl border border-violet-200 bg-white py-3 text-sm font-semibold text-violet-900 hover:bg-violet-50"
+        >
+          Zerar limbo desta figurinha
         </button>
       </div>
       <p className="mt-4 text-xs text-slate-500">
-        Informe quantas figurinhas iguais você tem no total no bolso/arquivo. Todas que passam da primeira
-        viram repetidas: o marcador rosado no canto mostra quantas cópias a mais você tem da mesma figurinha.
+        <strong>No álbum:</strong> quantas iguais você já colou ou conta como no álbum. O que passa da primeira vira
+        repetida (marcador rosado na grade). <strong>No limbo:</strong> só trocas ainda não coladas — use a lista em
+        Mais → Limbo para não esquecer antes da próxima troca.
       </p>
       <div className="mt-6 flex justify-center">
         <ManualCloudSaveButton notify={notify} className="min-h-11 w-full max-w-xs sm:w-auto" />

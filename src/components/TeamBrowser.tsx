@@ -6,12 +6,27 @@ import { useCollection } from '@/context/CollectionContext'
 import { TeamFlag } from '@/components/TeamFlag'
 import { getTeamTheme } from '@/lib/teamThemes'
 import { ManualCloudSaveButton } from '@/components/ManualCloudSaveButton'
+import { countTeamSlotsFilled } from '@/utils/teamCounts'
 
-function TeamNameWithFlag({ code, name }: { code: string; name: string }) {
+function TeamNameWithFlag({
+  code,
+  name,
+  countLabel,
+}: {
+  code: string
+  name: string
+  /** ex. "(5/20)" */
+  countLabel?: string
+}) {
   return (
-    <span className="flex items-center gap-3">
+    <span className="flex min-w-0 flex-1 items-center gap-3">
       <TeamFlag code={code} title={name} />
-      <span className="text-base font-semibold text-slate-900">{name}</span>
+      <span className="min-w-0 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+        <span className="text-base font-semibold text-slate-900">{name}</span>
+        {countLabel ? (
+          <span className="text-sm font-bold tabular-nums text-teal-800">{countLabel}</span>
+        ) : null}
+      </span>
     </span>
   )
 }
@@ -134,16 +149,23 @@ export function TeamBrowser({
                     Grupo {group}
                   </h2>
                   <div className="grid gap-2 sm:grid-cols-2">
-                    {list.map((t) => (
-                      <button
-                        key={t.code}
-                        type="button"
-                        onClick={() => setCode(t.code)}
-                        className="flex min-h-[3.75rem] items-center rounded-3xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm transition hover:border-teal-300 hover:bg-teal-50"
-                      >
-                        <TeamNameWithFlag code={t.code} name={t.name} />
-                      </button>
-                    ))}
+                    {list.map((t) => {
+                      const { filled, total } = countTeamSlotsFilled(catalog, state, t.code)
+                      return (
+                        <button
+                          key={t.code}
+                          type="button"
+                          onClick={() => setCode(t.code)}
+                          className="flex min-h-[3.75rem] items-center rounded-3xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm transition hover:border-teal-300 hover:bg-teal-50"
+                        >
+                          <TeamNameWithFlag
+                            code={t.code}
+                            name={t.name}
+                            countLabel={`(${filled}/${total})`}
+                          />
+                        </button>
+                      )
+                    })}
                   </div>
                 </section>
               ))
@@ -159,19 +181,26 @@ export function TeamBrowser({
               </p>
             ) : (
               <div className="grid gap-2 sm:grid-cols-2">
-                {alphaList.map((t) => (
-                  <button
-                    key={t.code}
-                    type="button"
-                    onClick={() => setCode(t.code)}
-                    className="flex min-h-[3.75rem] flex-col justify-center gap-1 rounded-3xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm transition hover:border-teal-300 hover:bg-teal-50"
-                  >
-                    <TeamNameWithFlag code={t.code} name={t.name} />
-                    <span className="pl-11 text-xs uppercase tracking-[0.15em] text-slate-500">
-                      Grupo {t.group}
-                    </span>
-                  </button>
-                ))}
+                {alphaList.map((t) => {
+                  const { filled, total } = countTeamSlotsFilled(catalog, state, t.code)
+                  return (
+                    <button
+                      key={t.code}
+                      type="button"
+                      onClick={() => setCode(t.code)}
+                      className="flex min-h-[3.75rem] flex-col justify-center gap-1 rounded-3xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm transition hover:border-teal-300 hover:bg-teal-50"
+                    >
+                      <TeamNameWithFlag
+                        code={t.code}
+                        name={t.name}
+                        countLabel={`(${filled}/${total})`}
+                      />
+                      <span className="pl-11 text-xs uppercase tracking-[0.15em] text-slate-500">
+                        Grupo {t.group}
+                      </span>
+                    </button>
+                  )
+                })}
               </div>
             )}
           </div>
@@ -182,6 +211,10 @@ export function TeamBrowser({
 
   const team = teams.find((t) => t.code === code)!
   const theme = getTeamTheme(team.code)
+  const teamSlots = useMemo(
+    () => countTeamSlotsFilled(catalog, state, team.code),
+    [catalog, state, team.code],
+  )
   const teamIndex = teams.findIndex((t) => t.code === code)
   const prevTeam = teamIndex > 0 ? teams[teamIndex - 1] : null
   const nextTeam = teamIndex >= 0 && teamIndex < teams.length - 1 ? teams[teamIndex + 1] : null
@@ -218,7 +251,10 @@ export function TeamBrowser({
               Grupo {team.group}
             </p>
             <p className="truncate text-lg font-black leading-tight" style={{ color: theme.primaryDark }}>
-              {team.name}
+              <span>{team.name}</span>{' '}
+              <span className="text-sm font-bold tabular-nums" style={{ color: theme.primary }}>
+                ({teamSlots.filled}/{teamSlots.total})
+              </span>
             </p>
           </div>
         </div>

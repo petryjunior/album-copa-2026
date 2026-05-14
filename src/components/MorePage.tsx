@@ -1,7 +1,9 @@
 import { useState } from 'react'
+import type { CatalogEntry } from '@/types/catalog'
 import { useAuth } from '@/context/AuthContext'
 import { useCloudSync } from '@/context/CloudSyncContext'
 import { useCollection } from '@/context/CollectionContext'
+import { LimboSection } from '@/components/LimboSection'
 import { buildShareDuplicatesText, buildShareMissingText } from '@/utils/shareTexts'
 
 async function clipboard(text: string) {
@@ -15,7 +17,13 @@ function formatDateTimeBr(iso: string | null): string {
   return new Date(t).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
 }
 
-export function MorePage({ notify }: { notify: (msg: string) => void }) {
+export function MorePage({
+  notify,
+  onOpenSticker,
+}: {
+  notify: (msg: string) => void
+  onOpenSticker: (entry: CatalogEntry) => void
+}) {
   const { exportJson, importJson, clearAll, catalog, state, buildShareUrl, lastLocalSavedAt } = useCollection()
   const { user, loading: authLoading, cloudConfigured, signInWithGoogle, signOut } = useAuth()
   const { lastCloudPushAt, lastCloudError, pullDone } = useCloudSync()
@@ -60,6 +68,8 @@ export function MorePage({ notify }: { notify: (msg: string) => void }) {
           </button>
         </div>
       </section>
+
+      <LimboSection onOpenSticker={onOpenSticker} notify={notify} />
 
       <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
         <h2 className="text-base font-black text-slate-900">Conta e sincronização</h2>

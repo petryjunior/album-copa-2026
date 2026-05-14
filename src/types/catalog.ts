@@ -24,4 +24,9 @@ export type PersistedShape = {
   version: 3
   /** Quantidade total por id (1–980); ≥1 conta como “tem no álbum”. */
   quantities: Record<string, number>
+  /**
+   * Figurinhas já adquiridas (ex.: em trocas) que ainda não foram coladas no álbum.
+   * Não entram em “faltando” nem em repetidas do álbum; só o que está em `quantities` conta.
+   */
+  limboQuantities?: Record<string, number>
 }

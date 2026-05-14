@@ -16,12 +16,16 @@ import { buildCollectionShareUrl, decodeCollectionFromHash } from '@/utils/colle
 
 export const STORAGE_KEY = 'album-copa-2026-collection-v2026-physical-order'
 
-type State = Record<number, number>
+type QtyMap = Record<number, number>
+
+type Combined = { album: QtyMap; limbo: QtyMap }
 
 type Action =
-  | { type: 'hydrate'; data: State }
+  | { type: 'hydrate'; album: QtyMap; limbo: QtyMap }
   | { type: 'setQty'; id: number; qty: number }
+  | { type: 'setLimboQty'; id: number; qty: number }
   | { type: 'inc'; id: number; delta: number }
+  | { type: 'incLimbo'; id: number; delta: number }
   | { type: 'bulkEnsureMin'; ids: number[]; min: number }
   | { type: 'bulkAdd'; ids: number[]; add: number }
   | { type: 'clearAll' }
@@ -32,71 +36,117 @@ function clampQty(q: number) {
   return Math.min(999, Math.max(0, n))
 }
 
-function reducer(state: State, action: Action): State {
+function stripZeroKey(map: QtyMap, id: number): QtyMap {
+  const { [id]: _, ...rest } = map
+  return rest
+}
+
+function combinedReducer(s: Combined, action: Action): Combined {
   switch (action.type) {
     case 'hydrate':
-      return { ...action.data }
+      return { album: { ...action.album }, limbo: { ...action.limbo } }
     case 'setQty':
-      return { ...state, [action.id]: clampQty(action.qty) }
+      return { ...s, album: { ...s.album, [action.id]: clampQty(action.qty) } }
+    case 'setLimboQty': {
+      const q = clampQty(action.qty)
+      if (q === 0) return { ...s, limbo: stripZeroKey(s.limbo, action.id) }
+      return { ...s, limbo: { ...s.limbo, [action.id]: q } }
+    }
     case 'inc': {
-      const cur = state[action.id] ?? 0
-      return { ...state, [action.id]: clampQty(cur + action.delta) }
+      const cur = s.album[action.id] ?? 0
+      return { ...s, album: { ...s.album, [action.id]: clampQty(cur + action.delta) } }
+    }
+    case 'incLimbo': {
+      const cur = s.limbo[action.id] ?? 0
+      const nq = clampQty(cur + action.delta)
+      if (nq === 0) return { ...s, limbo: stripZeroKey(s.limbo, action.id) }
+      return { ...s, limbo: { ...s.limbo, [action.id]: nq } }
     }
     case 'bulkEnsureMin': {
-      const next = { ...state }
+      const next = { ...s.album }
       for (const id of action.ids) {
         const cur = next[id] ?? 0
         next[id] = Math.max(cur, clampQty(action.min))
       }
-      return next
+      return { ...s, album: next }
     }
     case 'bulkAdd': {
-      const next = { ...state }
+      const next = { ...s.album }
       for (const id of action.ids) {
         const cur = next[id] ?? 0
         next[id] = clampQty(cur + action.add)
       }
-      return next
+      return { ...s, album: next }
     }
     case 'clearAll':
-      return {}
+      return { album: {}, limbo: {} }
     default:
-      return state
+      return s
   }
 }
 
-function loadFromStorage(): State {
+function quantitiesFromRecord(rec: Record<string, number>): QtyMap {
+  const out: QtyMap = {}
+  for (const [k, v] of Object.entries(rec)) {
+    const id = Number(k)
+    if (!Number.isNaN(id)) out[id] = clampQty(Number(v))
+  }
+  return out
+}
+
+function limboFromShape(shape: PersistedShape): QtyMap {
+  if (!shape.limboQuantities || typeof shape.limboQuantities !== 'object') return {}
+  return quantitiesFromRecord(shape.limboQuantities)
+}
+
+function loadCombined(): Combined {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return {}
+    if (!raw) return { album: {}, limbo: {} }
     if (!localStorage.getItem(LOCAL_SAVED_AT_KEY)) {
       localStorage.setItem(LOCAL_SAVED_AT_KEY, new Date().toISOString())
     }
     const parsed = JSON.parse(raw) as PersistedShape
-    if (parsed.version !== 3 || !parsed.quantities) return {}
-    const out: State = {}
-    for (const [k, v] of Object.entries(parsed.quantities)) {
-      const id = Number(k)
-      if (!Number.isNaN(id)) out[id] = clampQty(v)
+    if (parsed.version !== 3 || !parsed.quantities) return { album: {}, limbo: {} }
+    return {
+      album: quantitiesFromRecord(parsed.quantities),
+      limbo: limboFromShape(parsed),
     }
-    return out
   } catch {
-    return {}
+    return { album: {}, limbo: {} }
   }
+}
+
+function persistCombined(album: QtyMap, limbo: QtyMap) {
+  const shape: PersistedShape = { version: 3, quantities: {} }
+  for (const [k, v] of Object.entries(album)) {
+    if (v > 0) shape.quantities[k] = v
+  }
+  const lq: Record<string, number> = {}
+  for (const [k, v] of Object.entries(limbo)) {
+    if (v > 0) lq[k] = v
+  }
+  if (Object.keys(lq).length > 0) shape.limboQuantities = lq
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(shape))
 }
 
 type Ctx = {
   catalog: typeof CATALOG
-  state: State
+  /** Quantidades coladas / contadas no álbum (comportamento anterior). */
+  state: QtyMap
+  /** Trocas ainda não coladas no álbum. */
+  limboState: QtyMap
   /** ISO timestamp do último salvamento no armazenamento local deste navegador */
   lastLocalSavedAt: string | null
   setQty: (id: number, qty: number) => void
+  setLimboQty: (id: number, qty: number) => void
   inc: (id: number, delta: number) => void
+  incLimbo: (id: number, delta: number) => void
   bulkEnsureMin: (ids: number[], min: number) => void
   bulkAdd: (ids: number[], add: number) => void
   clearAll: () => void
   exportJson: () => string
-  /** Coleção compacta (apenas quantidades positivas) para link ou JSON minimal. */
+  /** Coleção compacta para link, JSON ou nuvem. */
   exportPersistedShape: () => PersistedShape
   buildShareUrl: () => string
   importJson: (raw: string) => { ok: true } | { ok: false; error: string }
@@ -109,7 +159,9 @@ type Ctx = {
 const CollectionContext = createContext<Ctx | null>(null)
 
 export function CollectionProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, {}, () => loadFromStorage())
+  const [combined, dispatch] = useReducer(combinedReducer, { album: {}, limbo: {} }, () => loadCombined())
+  const { album: state, limbo: limboState } = combined
+
   const [lastLocalSavedAt, setLastLocalSavedAt] = useState<string | null>(() => {
     try {
       return localStorage.getItem(LOCAL_SAVED_AT_KEY)
@@ -120,12 +172,8 @@ export function CollectionProvider({ children }: { children: ReactNode }) {
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pendingSavedAtRef = useRef<string | null>(null)
 
-  function saveToStorage(next: State) {
-    const shape: PersistedShape = {
-      version: 3,
-      quantities: Object.fromEntries(Object.entries(next).map(([k, v]) => [k, v])),
-    }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(shape))
+  function saveToStorage(album: QtyMap, limbo: QtyMap) {
+    persistCombined(album, limbo)
     const at = pendingSavedAtRef.current ?? new Date().toISOString()
     pendingSavedAtRef.current = null
     localStorage.setItem(LOCAL_SAVED_AT_KEY, at)
@@ -134,18 +182,26 @@ export function CollectionProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (saveTimer.current) clearTimeout(saveTimer.current)
-    saveTimer.current = setTimeout(() => saveToStorage(state), 250)
+    saveTimer.current = window.setTimeout(() => saveToStorage(combined.album, combined.limbo), 250)
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current)
     }
-  }, [state])
+  }, [combined])
 
   const setQty = useCallback((id: number, qty: number) => {
     dispatch({ type: 'setQty', id, qty })
   }, [])
 
+  const setLimboQty = useCallback((id: number, qty: number) => {
+    dispatch({ type: 'setLimboQty', id, qty })
+  }, [])
+
   const inc = useCallback((id: number, delta: number) => {
     dispatch({ type: 'inc', id, delta })
+  }, [])
+
+  const incLimbo = useCallback((id: number, delta: number) => {
+    dispatch({ type: 'incLimbo', id, delta })
   }, [])
 
   const bulkEnsureMin = useCallback((ids: number[], min: number) => {
@@ -173,8 +229,13 @@ export function CollectionProvider({ children }: { children: ReactNode }) {
     for (const [k, v] of Object.entries(state)) {
       if (v > 0) shape.quantities[k] = v
     }
+    const lq: Record<string, number> = {}
+    for (const [k, v] of Object.entries(limboState)) {
+      if (v > 0) lq[k] = v
+    }
+    if (Object.keys(lq).length > 0) shape.limboQuantities = lq
     return shape
-  }, [state])
+  }, [state, limboState])
 
   const exportJson = useCallback(() => JSON.stringify(exportPersistedShape(), null, 2), [exportPersistedShape])
 
@@ -187,12 +248,9 @@ export function CollectionProvider({ children }: { children: ReactNode }) {
     } catch {
       /* ignore */
     }
-    const next: State = {}
-    for (const [k, v] of Object.entries(shape.quantities)) {
-      const id = Number(k)
-      if (!Number.isNaN(id)) next[id] = clampQty(Number(v))
-    }
-    dispatch({ type: 'hydrate', data: next })
+    const album = quantitiesFromRecord(shape.quantities)
+    const limbo = limboFromShape(shape)
+    dispatch({ type: 'hydrate', album, limbo })
   }, [])
 
   const alignSavedAtFromServer = useCallback((serverUpdatedAtIso: string) => {
@@ -218,12 +276,12 @@ export function CollectionProvider({ children }: { children: ReactNode }) {
       if (parsed.version !== 3 || typeof parsed.quantities !== 'object' || !parsed.quantities) {
         return { ok: false as const, error: 'Formato inválido (version 3 esperada).' }
       }
-      const next: State = {}
-      for (const [k, v] of Object.entries(parsed.quantities)) {
-        const id = Number(k)
-        if (!Number.isNaN(id)) next[id] = clampQty(Number(v))
-      }
-      dispatch({ type: 'hydrate', data: next })
+      const album = quantitiesFromRecord(parsed.quantities)
+      const limbo =
+        parsed.limboQuantities && typeof parsed.limboQuantities === 'object'
+          ? quantitiesFromRecord(parsed.limboQuantities)
+          : {}
+      dispatch({ type: 'hydrate', album, limbo })
       try {
         localStorage.setItem(LAST_REMOTE_APPLIED_AT_KEY, new Date().toISOString())
       } catch {
@@ -247,12 +305,9 @@ export function CollectionProvider({ children }: { children: ReactNode }) {
       window.history.replaceState(null, '', path)
       return
     }
-    const next: State = {}
-    for (const [k, v] of Object.entries(parsed.quantities)) {
-      const id = Number(k)
-      if (!Number.isNaN(id)) next[id] = clampQty(Number(v))
-    }
-    dispatch({ type: 'hydrate', data: next })
+    const album = quantitiesFromRecord(parsed.quantities)
+    const limbo = limboFromShape(parsed)
+    dispatch({ type: 'hydrate', album, limbo })
     try {
       localStorage.setItem(LAST_REMOTE_APPLIED_AT_KEY, new Date().toISOString())
     } catch {
@@ -268,12 +323,9 @@ export function CollectionProvider({ children }: { children: ReactNode }) {
       try {
         const parsed = JSON.parse(e.newValue) as PersistedShape
         if (parsed.version !== 3 || typeof parsed.quantities !== 'object' || !parsed.quantities) return
-        const next: State = {}
-        for (const [k, v] of Object.entries(parsed.quantities)) {
-          const id = Number(k)
-          if (!Number.isNaN(id)) next[id] = clampQty(Number(v))
-        }
-        dispatch({ type: 'hydrate', data: next })
+        const album = quantitiesFromRecord(parsed.quantities)
+        const limbo = limboFromShape(parsed)
+        dispatch({ type: 'hydrate', album, limbo })
       } catch {
         /* ignore */
       }
@@ -286,9 +338,12 @@ export function CollectionProvider({ children }: { children: ReactNode }) {
     () => ({
       catalog: CATALOG,
       state,
+      limboState,
       lastLocalSavedAt,
       setQty,
+      setLimboQty,
       inc,
+      incLimbo,
       bulkEnsureMin,
       bulkAdd,
       clearAll,
@@ -301,9 +356,12 @@ export function CollectionProvider({ children }: { children: ReactNode }) {
     }),
     [
       state,
+      limboState,
       lastLocalSavedAt,
       setQty,
+      setLimboQty,
       inc,
+      incLimbo,
       bulkEnsureMin,
       bulkAdd,
       clearAll,

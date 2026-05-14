@@ -119,7 +119,7 @@ function AppShell() {
         {tab === 'repetidas' && <DuplicatesBottomSection onOpenSticker={setActiveEntry} notify={notify} />}
 
         {tab === 'times' && <TeamBrowser onPick={setActiveEntry} notify={notify} />}
-        {tab === 'mais' && <MorePage notify={notify} />}
+        {tab === 'mais' && <MorePage notify={notify} onOpenSticker={setActiveEntry} />}
       </main>
 
       {activeEntry ? (
