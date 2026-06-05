@@ -48,6 +48,7 @@ function teamMatchesFilter(t: TeamRow, qRaw: string): boolean {
 }
 
 type SortMode = 'group' | 'alpha'
+type SlotFilter = 'all' | 'missing'
 
 export function TeamBrowser({
   onPick,
@@ -61,6 +62,7 @@ export function TeamBrowser({
   const [code, setCode] = useState<string | null>(null)
   const [filter, setFilter] = useState('')
   const [sortMode, setSortMode] = useState<SortMode>('group')
+  const [slotFilter, setSlotFilter] = useState<SlotFilter>('all')
 
   const prevDetailCodeRef = useRef<string | null>(null)
   const detailHistoryPushedRef = useRef(false)
@@ -133,6 +135,17 @@ export function TeamBrowser({
     if (!code) return []
     return catalog.filter((e) => e.teamCode === code)
   }, [catalog, code])
+
+  const displayEntries = useMemo(() => {
+    if (slotFilter === 'missing') {
+      return entries.filter((e) => (state[e.id] ?? 0) < 1)
+    }
+    return entries
+  }, [entries, slotFilter, state])
+
+  useEffect(() => {
+    setSlotFilter('all')
+  }, [code])
 
   const selectedTeam = useMemo(
     () => (code ? (teams.find((t) => t.code === code) ?? null) : null),
@@ -371,8 +384,42 @@ export function TeamBrowser({
           )}
         </div>
       )}
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Filtrar figurinhas da seleção">
+        <button
+          type="button"
+          onClick={() => setSlotFilter('all')}
+          className={`min-h-[2.75rem] rounded-full px-4 py-2 text-sm font-semibold transition ${
+            slotFilter === 'all'
+              ? 'text-white shadow-sm'
+              : 'border-2 bg-white/90 backdrop-blur-sm hover:bg-white'
+          }`}
+          style={
+            slotFilter === 'all'
+              ? { backgroundColor: theme.primary }
+              : { borderColor: theme.accent, color: theme.primaryDark }
+          }
+        >
+          Todas ({entries.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => setSlotFilter('missing')}
+          className={`min-h-[2.75rem] rounded-full px-4 py-2 text-sm font-semibold transition ${
+            slotFilter === 'missing'
+              ? 'text-white shadow-sm'
+              : 'border-2 bg-white/90 backdrop-blur-sm hover:bg-white'
+          }`}
+          style={
+            slotFilter === 'missing'
+              ? { backgroundColor: theme.primary }
+              : { borderColor: theme.accent, color: theme.primaryDark }
+          }
+        >
+          Faltando ({entries.length - teamSlots.filled})
+        </button>
+      </div>
       <StickerGrid
-        entries={entries}
+        entries={displayEntries}
         qtyOf={(id) => state[id] ?? 0}
         onMarkHaveOne={(e) => {
           const q = state[e.id] ?? 0
