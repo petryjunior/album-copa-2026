@@ -86,7 +86,8 @@ export function buildShareDuplicatesText(
     if (dup > 0) pairs.push({ e, dup })
   }
   pairs.sort((a, b) => a.e.id - b.e.id)
-  const entries = pairs.map(({ e, dup }) => `${stickerShareLabel(e)}×${dup}`)
-  const totalDup = catalog.reduce((acc, e) => acc + Math.max(0, (quantities[e.id] ?? 0) - 1), 0)
-  return `Figurinhas repetidas (total ${totalDup} figurinhas além da primeira no álbum): ${entries.join(', ') || '—'}`
+  const lines = pairs.map(({ e, dup }) => `${stickerShareLabel(e)} (${dup})`)
+  const header = 'Figurinhas repetidas:'
+  if (!lines.length) return `${header}\n—`
+  return `${header}\n${lines.join('\n')}`
 }
