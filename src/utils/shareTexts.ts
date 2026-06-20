@@ -13,55 +13,36 @@ export function stickerShareLabel(e: CatalogEntry): string {
   return Number.isFinite(slot) ? `${code} ${slot}` : `${code} ${e.displayPrinted}`
 }
 
-function canMergeConsecutive(a: CatalogEntry, b: CatalogEntry): boolean {
-  if (b.id !== a.id + 1) return false
-  if (a.segment === 'panini') return false
-  if (a.segment === 'fwc' && b.segment === 'fwc') {
-    return a.fwcNumber != null && b.fwcNumber === a.fwcNumber + 1
-  }
-  if (a.segment === 'team' && b.segment === 'team') {
-    return (
-      a.teamCode === b.teamCode &&
-      a.slotInTeam != null &&
-      b.slotInTeam === a.slotInTeam + 1
-    )
-  }
-  return false
-}
-
-function rangeLabel(start: CatalogEntry, end: CatalogEntry): string {
-  if (start.id === end.id) return stickerShareLabel(start)
-  if (start.segment === 'team' && end.segment === 'team' && start.teamCode === end.teamCode) {
-    const a = start.slotInTeam
-    const b = end.slotInTeam
-    if (a != null && b != null && a !== b) return `${start.teamCode} ${a}-${b}`
-  }
-  if (start.segment === 'fwc' && end.segment === 'fwc') {
-    const a = start.fwcNumber
-    const b = end.fwcNumber
-    if (a != null && b != null && a !== b) return `FWC ${a}-${b}`
-  }
-  return `${stickerShareLabel(start)}–${stickerShareLabel(end)}`
-}
-
-/** Junta figurinhas em ordem do álbum; intervalos só quando forem IDs consecutivos e mesmo país / FWC consecutivo. */
-export function formatShareLabelsCompact(entries: CatalogEntry[]): string {
-  if (!entries.length) return ''
+function formatMissingShareLines(entries: CatalogEntry[]): string[] {
   const sorted = [...entries].sort((a, b) => a.id - b.id)
-  const parts: string[] = []
-  let i = 0
-  while (i < sorted.length) {
-    const start = sorted[i]
-    let end = start
-    let j = i
-    while (j + 1 < sorted.length && canMergeConsecutive(sorted[j], sorted[j + 1])) {
-      j++
-      end = sorted[j]
-    }
-    parts.push(rangeLabel(start, end))
-    i = j + 1
+  const lines: string[] = []
+
+  if (sorted.some((e) => e.segment === 'panini')) {
+    lines.push('00')
   }
-  return parts.join(', ')
+
+  const fwcNums = sorted
+    .filter((e) => e.segment === 'fwc' && e.fwcNumber != null)
+    .map((e) => e.fwcNumber as number)
+  if (fwcNums.length > 0) {
+    lines.push(`FWC ${fwcNums.join(', ')}`)
+  }
+
+  const teamOrder: string[] = []
+  const slotsByTeam = new Map<string, number[]>()
+  for (const e of sorted) {
+    if (e.segment !== 'team' || !e.teamCode || e.slotInTeam == null) continue
+    if (!slotsByTeam.has(e.teamCode)) {
+      teamOrder.push(e.teamCode)
+      slotsByTeam.set(e.teamCode, [])
+    }
+    slotsByTeam.get(e.teamCode)!.push(e.slotInTeam)
+  }
+  for (const code of teamOrder) {
+    lines.push(`${code} ${slotsByTeam.get(code)!.join(', ')}`)
+  }
+
+  return lines
 }
 
 export function buildShareMissingText(
@@ -71,8 +52,10 @@ export function buildShareMissingText(
   const { missing } = collectionStats(catalog, quantities)
   const idToEntry = new Map(catalog.map((e) => [e.id, e]))
   const missingEntries = missing.map((id) => idToEntry.get(id)).filter((e): e is CatalogEntry => e != null)
-  const line = formatShareLabelsCompact(missingEntries)
-  return `Faltam (${missing.length}/${catalog.length}): ${line}`
+  const lines = formatMissingShareLines(missingEntries)
+  const header = 'Faltam:'
+  if (!lines.length) return `${header}\n—`
+  return `${header}\n${lines.join('\n')}`
 }
 
 export function buildShareDuplicatesText(
